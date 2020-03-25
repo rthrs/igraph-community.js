@@ -225,14 +225,14 @@ extern void xmlCheckVersion(int version);
 #endif
 
 /*
- * #pragma comment(lib, "iconv.lib")
+ * #pragma comment(test, "iconv.test")
  *
  * pragma understood my MS compiler which enables a conditional link with
  * iconv.
  */
 #ifdef _MSC_VER
 #if defined LIBXML_ICONV_ENABLED && !defined LIBXML2_COMPILING_MSCCDEF
-#pragma comment(lib, "iconv.lib")
+#pragma comment(test, "iconv.test")
 #endif
 #endif
 

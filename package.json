@@ -1,0 +1,25 @@
+{
+  "name": "igraph-community",
+  "version": "1.0.0",
+  "description": "Emscripted community detection algorithms of C/C++ library called igraph",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rthrs/igraph-community.js.git"
+  },
+  "keywords": [
+    "igraph"
+  ],
+  "author": "Artur Myszkowski",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rthrs/igraph-community.js/issues"
+  },
+  "homepage": "https://github.com/rthrs/igraph-community.js#readme"
+}

@@ -132,7 +132,7 @@ wrtfmt.c:
 /* 23 Oct. 1992: Supply missing l_eof = 0 assignment to s_rsne() in rsne.c
 		 (so end-of-file on other files won't confuse namelist
 		 reads of external files).  Prepend f__ to external
-		 names that are only of internal interest to lib[FI]77. */
+		 names that are only of internal interest to test[FI]77. */
 /* 1 Feb. 1993:  backspace.c: fix bug that bit when last char of 2nd
 		 buffer == '\n'.
 		 endfile.c: guard against tiny L_tmpnam; close and reopen
