@@ -7,13 +7,20 @@ MAIN_OUT=community_detection.out.js
 EXTRA_EXPORTED_RUNTIME_METHODS='["cwrap"]'
 
 SRC_FILES=`find igraph/src -maxdepth 1 \( -name '*.c' -o -name '*.cc' \) \
-  | grep -v -E 'foreign|layout|drl|leiden'`
+  | grep -v -E 'foreign|layout|drl|leiden|gengraph|scg'`
 
-export OPTIMIZE="-Os"
+if [[ "$1" == --prod ]]; then
+  echo ">>> PRODUCTION MODE"
+  export OPTIMIZE="-Os"
+else
+  echo ">>> DEVELOPEMENT MODE"
+  export EMCC_DEBUG=1
+  export OPTIMIZE="-O0 -g4"
+fi
+
 export LDFLAGS="${OPTIMIZE}"
 export CFLAGS="${OPTIMIZE}"
 export CXXFLAGS="${OPTIMIZE}"
-#https://developers.google.com/web/updates/2019/01/emscripten-npm
 #https://developers.google.com/web/updates/2019/01/emscripten-npm
 emcc \
   ${OPTIMIZE} \

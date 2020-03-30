@@ -114,7 +114,20 @@ DECLDIR int igraph_community_eb_get_merges(const igraph_t *graph,
         igraph_matrix_t *merges,
         igraph_vector_t *bridges,
         igraph_vector_t *modularity,
-        igraph_vector_t *membership);
+        igraph_vector_t *membership,
+        igraph_vector_t *seed_membership);
+
+DECLDIR int igraph_community_edge_betweenness_mod2(const igraph_t *graph,
+                                                   igraph_vector_t *result,
+                                                   igraph_vector_t *edge_betweenness,
+                                                   igraph_matrix_t *merges,
+                                                   igraph_vector_t *bridges,
+                                                   igraph_vector_t *modularity,
+                                                   igraph_vector_t *membership,
+                                                   igraph_bool_t directed,
+                                                   const igraph_vector_t *weights,
+                                                   // NEW PARAM
+                                                   igraph_vector_t *seed_membership);
 
 DECLDIR int igraph_community_fastgreedy(const igraph_t *graph,
                                         const igraph_vector_t *weights,
