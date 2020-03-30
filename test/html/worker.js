@@ -51,7 +51,7 @@ onmessage = function(e) {
 
         const { algo, n, edges } = e.data;
 
-        const { modularity, membership } = runCommunityDetection(algo, n, edges);
-        postMessage([modularity, membership]);
+        const result = runCommunityDetection(algo, n, edges);
+        postMessage(result);
     };
 };

@@ -13,7 +13,8 @@ export OPTIMIZE="-Os"
 export LDFLAGS="${OPTIMIZE}"
 export CFLAGS="${OPTIMIZE}"
 export CXXFLAGS="${OPTIMIZE}"
-
+#https://developers.google.com/web/updates/2019/01/emscripten-npm
+#https://developers.google.com/web/updates/2019/01/emscripten-npm
 emcc \
   ${OPTIMIZE} \
   -s STRICT=1 \
