@@ -1,78 +1,82 @@
-// TODO add id mapping... count nodes from 0
+const Module = require('../../dist/community_detection.out.js');
 
-import {values, keys, map, differenceWith, findIndex} from "ramda";
+let publicAPI = null;
 
-function getRandomConnectedSeedSets(graph, maxSeedSetsCount, seedSetMaxSize = 5) {
-    const { nodesDict } = graph;
-    let availableNodes = { ...nodesDict };
-    const seedSets = [];
+module.exports = new Promise(((resolve, reject) => {
+    if (publicAPI) {
+        resolve(publicAPI);
+    } else {
+        loadPublicAPI((api) => {
+            publicAPI = api;
+            resolve(api);
+        })
+    }
+}));
 
-    for (let i = 0; i < maxSeedSetsCount; i++) {
-        const { subGraphNodes } = getRandomInducedSubGraph(availableNodes, seedSetMaxSize);
-        for (let node of subGraphNodes) {
-            delete availableNodes[node.id];
+function loadPublicAPI(onLoaded) {
+    Module.onRuntimeInitialized = async _ => {
+        const api = {
+            edgeBetweenness: Module.cwrap('edgeBetweenness', 'number', ['number', 'number', 'number']),
+            edgeBetweennessMod2: Module.cwrap('edgeBetweennessMod2', 'number', ['number', 'number', 'number', 'number']),
+
+            fastGreedy: Module.cwrap('fastGreedy', 'number', ['number', 'number', 'number']),
+            infomap: Module.cwrap('infomap', 'number', ['number', 'number', 'number']),
+            labelPropagation: Module.cwrap('labelPropagation', 'number', ['number', 'number', 'number']),
+            louvain: Module.cwrap('louvain', 'number', ['number', 'number', 'number']),
+
+            createBuffer: Module.cwrap('createBuffer', 'number', ['number']),
+            create_buffer: Module.cwrap('create_buffer', 'number', ['number', 'number']),
+            destroyBuffer: Module.cwrap('destroyBuffer', '', ['number']),
+
+            getMembershipPointer: Module.cwrap('getMembershipPointer', 'number', []),
+            getModularityPointer: Module.cwrap('getModularityPointer', 'number', []),
+            getModularitySize: Module.cwrap('getModularitySize', 'number', []),
+
+            freeResult: Module.cwrap('freeResult', '', []),
+        };
+
+        // @edges: undirected edges list, the first two elements are the first edge, etc.
+        function runCommunityDetection(algorithmName, n, edges, seedMembership = null) {
+            const edgesPointer = api.createBuffer(edges.length);
+            const uint8Edges = new Uint8Array(new Float64Array(edges).buffer);
+            Module.HEAP8.set(uint8Edges, edgesPointer);
+
+            const args = [n, edgesPointer, edges.length];
+            let seedMembershipPointer;
+            if (seedMembership) {
+                seedMembershipPointer = api.createBuffer(seedMembership.length);
+                const uint8SeedMembership = new Uint8Array(new Float64Array(seedMembership).buffer);
+                Module.HEAP8.set(uint8SeedMembership, seedMembershipPointer);
+
+                args.push(seedMembershipPointer);
+            }
+            api[algorithmName](...args);
+
+            const membership = getResultData(api.getMembershipPointer(), n);
+            const modularity = getResultData(api.getModularityPointer(), api.getModularitySize());
+
+            api.freeResult();
+            api.destroyBuffer(edgesPointer);
+            if (seedMembershipPointer) {
+                api.destroyBuffer(seedMembershipPointer);
+            }
+
+            return {
+                modularity,
+                membership
+            }
         }
-        seedSets[i] = subGraphNodes;
-    }
 
-    return seedSets;
-}
-
-function getRandomInducedSubGraph(nodesDict, seedSetMaxSize) {
-    // Start from random node which haven't been picked yet
-    // TODO Set instead of array for speed, but how to pick random nodes then?
-    const availableNodesIds = keys(nodesDict);
-    const { index, value: node } = getRandomValue(availableNodesIds);
-    availableNodesIds.splice(index, 1);
-
-    const subGraphNodes = [node];
-
-    // Then pick random neighbour of current connected component
-    for (let i = 0; i < seedSetMaxSize; i++) {
-        const { value: subGraphNode } = getRandomValue(subGraphNodes);
-        const neighbours = getNeighbours(subGraphNode);
-
-        const nodesToPick = differenceWith((a, b) => a.id === b.id, neighbours, subGraphNodes);
-        const { value: neighbourNode } = getRandomValue(nodesToPick);
-        const neighbourIndex = findIndex((id) => id === neighbourNode.id, availableNodesIds);
-        subGraphNodes.push(neighbourNode);
-        availableNodesIds.splice(neighbourIndex, 1);
-    }
-
-    return { subGraphNodes };
-}
-
-
-function getNeighbours(node) {
-    return map((edge) => edge.target, values(node.outEdges));
-}
-
-function getRandomValue(array) {
-    const index = getRandomIndex(array.length);
-    const value = array[index];
-    return { index, value };
-}
-
-function getRandomIndex(length) {
-    return getRandomNumber(0, length);
-}
-
-function getRandomNumber(from, to) {
-    // 'to' is exclusive
-    return from + Math.round(from - to - 1);
-}
-
-
-function getSeedSetsMembership(graph, seedSets) {
-    // TODO check nodesCount
-    const membership = new Array(graph.nodesCount).fill(-1);
-    let communityId = 0;
-
-    for (let seed of seedSets) {
-        for (let node of seed) {
-            // TODO check - "indexed id"..
-            membership[node.id] = communityId;
+        function getResultData(pointer, size) {
+            const resultView = new Float64Array(Module.HEAP8.buffer, pointer, size); // move data from buffer to js
+            return new Float64Array(resultView);
         }
-        communityId++;
-    }
+
+        onLoaded({
+            ...api,
+            runCommunityDetection,
+            getResultData
+        });
+    };
+
 }
