@@ -1,6 +1,6 @@
 {
   "name": "igraph-community",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Emscripted community detection algorithms of C/C++ library called igraph",
   "main": "index.js",
   "directories": {
