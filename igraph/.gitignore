@@ -16,7 +16,7 @@
 /build
 /compile
 /config.guess
-/config.h
+#/config.h
 /config.h.in
 /config.log
 /config.status
@@ -43,12 +43,8 @@
 /doc/Makefile.in
 /debian/Makefile
 /debian/Makefile.in
-/doc/Makefile
-/doc/Makefile.in
 /doc/book/Makefile
 /doc/book/Makefile.in
-/src/Makefile
-/src/Makefile.in
 /tests/Makefile
 /tests/Makefile.in
 /interfaces/Makefile

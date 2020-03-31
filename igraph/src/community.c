@@ -114,21 +114,15 @@ int igraph_i_community_eb_get_merges2(const igraph_t *graph,
         }
     }
 
-    //// FIXME DOESNT WORK PROPERLY!
     //// MOD Assign each node to the sole community of one unless it's in the seed community
     if (seed_membership) {
         igraph_vector_update(&mymembership, seed_membership); // TODO check case when more then one connected component...
 
-        printf("AFTER UPDATE: ");
-        for (i = 0; i < igraph_vector_size(&mymembership); i++) {
-            printf("%li ", (long int)VECTOR(mymembership)[i]);
-        }
-        printf("\n");
-
         long int max_idx = igraph_vector_which_max(&mymembership);
         long int max_community = VECTOR(mymembership)[max_idx];
         long int no_other_communities = 0;
-        printf("MAX comm: %li\n", max_community);
+
+        IGRAPH_DEBUG(printf("MAX comm: %li\n", max_community));
 
         for (i = 0; i < no_of_nodes; i++) {
             if (VECTOR(mymembership)[i] < 0) {
@@ -144,12 +138,6 @@ int igraph_i_community_eb_get_merges2(const igraph_t *graph,
     }
     //// MOD END
 
-    printf("INIT MEMBERSHIP MERGES: ");
-    for (i = 0; i < igraph_vector_size(&mymembership); i++) {
-        printf("%li ", (long int)VECTOR(mymembership)[i]);
-    }
-    printf("\n");
-
     if (membership) {
         igraph_vector_update(membership, &mymembership);
     }
@@ -160,17 +148,13 @@ int igraph_i_community_eb_get_merges2(const igraph_t *graph,
     }
 
     for (i = igraph_vector_size(edges) - 1; i >= 0; i--) {
-        // TODO debug - check from to manually...
-//        INIT MEMBERSHIP MERGES: 0 0 0 2 3 4 5 6 1 1 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 1 27 28 1
-//        EST MEMBERSIP IN LOOP: 69 -> 0 0 0 2 3 34 5 6 1 1 7 8 9 10 11 12 34 14 15 16 17 18 19 20 21 22 23 24 25 26 1 27 28 1
-//        EST MEMBERSIP IN LOOP: 68 -> 0 0 0 2 3 35 35 6 1 1 7 8 9 10 11 12 35 14 15 16 17 18 19 20 21 22 23 24 25 26 1 27 28 1
-
         long int edge = (long int) VECTOR(*edges)[i];
         long int from = IGRAPH_FROM(graph, edge);
         long int to = IGRAPH_TO(graph, edge);
         long int c1 = (long int) VECTOR(mymembership)[from];
         long int c2 = (long int) VECTOR(mymembership)[to];
         igraph_real_t actmod;
+        IGRAPH_DEBUG(printf("from: %li; to: %li; c1: %li; c2: %li\n", from, to, c1, c2));
         long int j;
         if (c1 != c2) {     /* this is a merge */
             if (res) {
@@ -190,6 +174,15 @@ int igraph_i_community_eb_get_merges2(const igraph_t *graph,
             }
 
             IGRAPH_CHECK(igraph_modularity(graph, &mymembership, &actmod, weights));
+
+            IGRAPH_DEBUG(do {
+                printf("MY MEMBERSIP IN LOOP: %li -> ", i);
+                for (int j = 0; j < igraph_vector_size(membership); j++) {
+                    printf("%li ", (long int) VECTOR(*membership)[j]);
+                }
+                printf("actmod: %f, weights: %li\n", actmod, weights);
+            } while (0))
+
             if (modularity) {
                 VECTOR(*modularity)[midx + 1] = actmod;
                 if (actmod > maxmod) {
@@ -202,12 +195,6 @@ int igraph_i_community_eb_get_merges2(const igraph_t *graph,
 
             midx++;
         }
-
-        printf("EST MEMBERSIP IN LOOP: %li -> ", i);
-        for (int j = 0; j < igraph_vector_size(membership); j++) {
-            printf("%li ", (long int)VECTOR(*membership)[j]);
-        }
-        printf("\n");
     }
 
     if (membership) {
@@ -919,29 +906,38 @@ int igraph_community_edge_betweenness_mod2(const igraph_t *graph,
 
     long int ommited_no_of_edges = 0;
 
-    // elist_out_p is pointer to a list of incidence list for all nodes
-    for (source = 0; source < no_of_nodes; source++) {
-        neip = igraph_inclist_get(elist_out_p, source);
-        neino = igraph_vector_int_size(neip);
+    igraph_eit_t eit;
+    igraph_es_t es;
 
-        for (i = 0; i < neino; i++) {
-            igraph_integer_t edge = (igraph_integer_t) VECTOR(*neip)[i];
-            igraph_integer_t from;
-            igraph_integer_t to;
+    IGRAPH_CHECK(igraph_es_all(&es, IGRAPH_EDGEORDER_ID));
+    IGRAPH_FINALLY(igraph_es_destroy, &es);
+    IGRAPH_CHECK(igraph_eit_create(graph, es, &eit));
+    IGRAPH_FINALLY(igraph_eit_destroy, &eit);
 
-            igraph_edge(graph, edge, &from, &to);
+    while (!IGRAPH_EIT_END(eit)) {
+        igraph_integer_t edge = IGRAPH_EIT_GET(eit);
+        igraph_integer_t from = IGRAPH_FROM(graph, edge);
+        igraph_integer_t to = IGRAPH_TO(graph, edge);
 
-            igraph_integer_t from_community = (igraph_integer_t)VECTOR(*seed_membership)[from];
-            igraph_integer_t to_community = (igraph_integer_t)VECTOR(*seed_membership)[to];
+        igraph_integer_t from_community = (igraph_integer_t)VECTOR(*seed_membership)[from];
+        igraph_integer_t to_community = (igraph_integer_t)VECTOR(*seed_membership)[to];
 
-            // check if both nodes linked by current edge are in the same community
-            if (from_community > 0 && to_community > 0 && from_community == to_community) {
-                ommited_no_of_edges++;
-                passive[edge] = 1;
-            }
+        IGRAPH_DEBUG(
+                printf("edge: %li, from: %li, to: %li, from:_c %li, to_c: %li  \n",
+                        edge, from, to, from_community, to_community));
+
+        // check if both nodes linked by current edge are in the same community
+        if (from_community >= 0 && to_community >= 0 && from_community == to_community) {
+            ommited_no_of_edges++;
+            passive[edge] = 1;
         }
+
+        IGRAPH_EIT_NEXT(eit);
     }
-    printf("OMMITED: %li\n", ommited_no_of_edges);
+    igraph_eit_destroy(&eit);
+    igraph_es_destroy(&es);
+
+    IGRAPH_DEBUG(printf("OMMITED: %li\n", ommited_no_of_edges));
     //// MOD END
 
 
