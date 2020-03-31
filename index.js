@@ -1,4 +1,4 @@
-const Module = require('../../dist/community_detection.out.js');
+const Module = require('./dist/community_detection.out.js');
 
 let publicAPI = null;
 
