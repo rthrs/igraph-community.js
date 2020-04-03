@@ -42,11 +42,14 @@ void show_results(igraph_t *g, igraph_vector_t *mod, igraph_matrix_t *merges,
     igraph_vector_init(&our_membership, 0);
 
     if (seed_membership != 0) {
-        printf("Seed membership: ");
+        printf("Seed membership: [");
         for (i = 0; i < igraph_vector_size(seed_membership); i++) {
-            printf("%li ", (long int)VECTOR(*seed_membership)[i]);
+            printf("%li", (long int)VECTOR(*seed_membership)[i]);
+            if (i != igraph_vector_size(seed_membership) - 1) {
+                printf(", ");
+            }
         }
-        printf("\n");
+        printf("]\n");
     }
 
 
@@ -63,11 +66,14 @@ void show_results(igraph_t *g, igraph_vector_t *mod, igraph_matrix_t *merges,
         igraph_community_to_membership(merges, igraph_vcount(g), i, &our_membership, 0);
     }
 
-    printf("Membership: ");
+    printf("Membership: [");
     for (i = 0; i < igraph_vector_size(&our_membership); i++) {
-        printf("%li ", (long int)VECTOR(our_membership)[i]);
+        printf("%li", (long int)VECTOR(our_membership)[i]);
+        if (i != igraph_vector_size(&our_membership) - 1) {
+            printf(", ");
+        }
     }
-    printf("\n");
+    printf("]\n");
 
     igraph_vector_destroy(&our_membership);
 }

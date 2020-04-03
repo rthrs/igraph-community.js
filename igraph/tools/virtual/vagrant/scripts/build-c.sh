@@ -25,7 +25,7 @@ if [ "$branch" = "0.5-main" ]; then
 ## Need the info file for the 0.5 tree
     cd doc ; make info ; cd ..
 fi
-make dist
+make wasm
 
 ## Canonical filename
 version=`grep " VERSION " config.h | cut -f3 -d" " | tr -d '"'`

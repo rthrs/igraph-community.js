@@ -1,5 +1,5 @@
 CURR_DIR=`pwd`
-OUT_DIR=dist
+OUT_DIR=wasm
 
 SRC_MAIN=community_detection.c
 MAIN_OUT=community_detection.out.js
