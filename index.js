@@ -1,17 +1,18 @@
 let publicAPI = null;
 
-const loadIgraphCommunityAPI = ({ wasm = false, onLoad = () => {} }) => new Promise(((resolve, reject) => {
-    if (publicAPI) {
-        resolve(publicAPI);
-        onLoad(publicAPI)
-    } else {
-        loadPublicAPI((api) => {
-            publicAPI = api;
-            resolve(api);
-            onLoad(api)
-        }, wasm)
-    }
-}));
+const loadIgraphCommunityAPI = ({ wasm = false, onLoad = () => {} } = {}) =>
+    new Promise(((resolve, reject) => {
+        if (publicAPI) {
+            resolve(publicAPI);
+            onLoad(publicAPI)
+        } else {
+            loadPublicAPI((api) => {
+                publicAPI = api;
+                resolve(api);
+                onLoad(api)
+            }, wasm)
+        }
+    }));
 
 function loadPublicAPI(onLoaded, wasm) {
     const distPrefix = wasm ? 'wasm' : 'asm';
