@@ -1,8 +1,9 @@
 let publicAPI = null;
 
-const loadIgraphCommunityAPI = (onLoad, { wasm = false }) => new Promise(((resolve, reject) => {
+const loadIgraphCommunityAPI = ({ wasm = false, onLoad = () => {} }) => new Promise(((resolve, reject) => {
     if (publicAPI) {
         resolve(publicAPI);
+        onLoad(publicAPI)
     } else {
         loadPublicAPI((api) => {
             publicAPI = api;
