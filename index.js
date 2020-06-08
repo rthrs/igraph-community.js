@@ -14,9 +14,11 @@ const loadIgraphCommunityAPI = ({ wasm = false, onLoad = () => {} } = {}) =>
         }
     }));
 
+const ModuleASM = require(`./dist/asm/community_detection.out.js`);
+const ModuleWASM = require(`./dist/wasm/community_detection.out.js`);
+
 function loadPublicAPI(onLoaded, wasm) {
-    const distPrefix = wasm ? 'wasm' : 'asm';
-    const Module = require(`./dist/${distPrefix}/community_detection.out.js`);
+    const Module = wasm ? ModuleWASM : ModuleASM;
 
     Module.onRuntimeInitialized = async _ => {
         const api = {
