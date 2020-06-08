@@ -1,6 +1,6 @@
 const loadIgraphCommunityAPI = require('../../index');
 
-loadIgraphCommunityAPI((api) => {
+loadIgraphCommunityAPI({ wasm: false }).then((api) => {
     let modularity, membership;
 
     const zachary = [
@@ -50,4 +50,4 @@ loadIgraphCommunityAPI((api) => {
     ({ modularity, membership } = api.runCommunityDetection('louvain', n, edges));
     console.log(modularity);
     console.log(membership);
-}, { wasm: false }); // set true or false to use wasm or not
+});
