@@ -86,34 +86,34 @@ Module.onRuntimeInitialized = async _ => {
     const edges = zachary;
 
     console.log('\nEDGE BETWEENNESS');
-    ({ modularity, membership } = runCommunityDetection('edgeBetweenness', n, edges));
-    // console.log(modularity);
-    // console.log(membership);
+    runCommunityDetection('edgeBetweenness', n, edges);
 
+
+    console.log('\nEDGE BETWEENNESS MOD2 - SEED 1');
     let seedMembership = new Array(n).fill(-1);
-
-    seedMembership[0] = seedMembership[1] = seedMembership[2] = 0;
-    seedMembership[8] = seedMembership[9] = seedMembership[30] = seedMembership[33] = 1;
-
-
-    console.log('\nEDGE BETWEENNESS MOD2');
-    ({ modularity, membership } = runCommunityDetection('edgeBetweennessMod2', n, edges, seedMembership));
-    // console.log(modularity);
-    // console.log(membership);
-
-
-    seedMembership = new Array(n).fill(-1);
-    // TODO check if are connected ... anyway it doesnt work probably when they are not - modularuty == 21...
-    // seedMembership[31] = seedMembership[32] = 0;
-    seedMembership[30] = seedMembership[31] = seedMembership[32] = seedMembership[25] = seedMembership[26] = seedMembership[27] = 0;
+    seedMembership[9] = seedMembership[33] = 0;
+    seedMembership[1] = seedMembership[2] = 1;
+    // seedMembership[0] = seedMembership[1] = seedMembership[2] = 0;
     // seedMembership[8] = seedMembership[9] = seedMembership[30] = seedMembership[33] = 1;
-
-    console.log('\nEDGE BETWEENNESS MOD2 - OTHER SEEDS');
-    ({ modularity, membership } = runCommunityDetection('edgeBetweennessMod2', n, edges, seedMembership));
-    // console.log(modularity);
-    // console.log(membership);
+    runCommunityDetection('edgeBetweennessMod2', n, edges, seedMembership);
 
 
+    console.log('\nEDGE BETWEENNESS MOD2 - SEED 2');
+    seedMembership = new Array(n).fill(-1);
+    seedMembership[33] = seedMembership[31] = 0;
+    seedMembership[0] = seedMembership[4] = 1;
+    runCommunityDetection('edgeBetweennessMod2', n, edges, seedMembership);
+
+
+    // console.log('\nEDGE BETWEENNESS MOD2 - SEED 3');
+    // seedMembership = new Array(n).fill(-1);
+    // seedMembership[9] = seedMembership[33] = seedMembership[8] = seedMembership[29] = seedMembership[2] = 0;
+    // runCommunityDetection('edgeBetweennessMod2', n, edges, seedMembership);
+    //
+    // console.log('\nEDGE BETWEENNESS MOD2 - SEED SANITY');
+    // // FIXME - modularity 29.0.... CHECK!!!
+    // seedMembership = [-1, -1, 0, -1, -1, -1, -1, -1, 0, 0, -1, -1, -1, -1, 0, 0, -1, -1, 0, -1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    // const r = runCommunityDetection('edgeBetweennessMod2', n, edges, seedMembership);
 
     // console.log('\nFAST GREEDY');
     // ({ modularity, membership } = runCommunityDetection('fastGreedy', n, edges));
