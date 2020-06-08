@@ -1,19 +1,21 @@
-const Module = require('./wasm/community_detection.out.js');
-
 let publicAPI = null;
 
-module.exports = new Promise(((resolve, reject) => {
+const loadIgraphCommunityAPI = (onLoad, { wasm = false }) => new Promise(((resolve, reject) => {
     if (publicAPI) {
         resolve(publicAPI);
     } else {
         loadPublicAPI((api) => {
             publicAPI = api;
             resolve(api);
-        })
+            onLoad(api)
+        }, wasm)
     }
 }));
 
-function loadPublicAPI(onLoaded) {
+function loadPublicAPI(onLoaded, wasm) {
+    const distPrefix = wasm ? 'wasm' : 'asm';
+    const Module = require(`./dist/${distPrefix}/community_detection.out.js`);
+
     Module.onRuntimeInitialized = async _ => {
         const api = {
             edgeBetweenness: Module.cwrap('edgeBetweenness', 'number', ['number', 'number', 'number']),
@@ -78,5 +80,6 @@ function loadPublicAPI(onLoaded) {
             getResultData
         });
     };
-
 }
+
+module.exports = loadIgraphCommunityAPI;
