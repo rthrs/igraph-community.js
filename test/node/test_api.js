@@ -3,7 +3,9 @@ const loadIgraphCommunityAPI = require('../../index');
 loadIgraphCommunityAPI({ wasm: false }).then((api) => {
     let modularity, membership;
 
-    const zachary = [
+    // ZKC
+    const n = 34;
+    const edges = [
         0,  1,  0,  2,  0,  3,  0,  4,  0,  5,
         0,  6,  0,  7,  0,  8,  0, 10,  0, 11,
         0, 12,  0, 13,  0, 17,  0, 19,  0, 21,
@@ -21,10 +23,6 @@ loadIgraphCommunityAPI({ wasm: false }).then((api) => {
         28, 33, 29, 32, 29, 33, 30, 32, 30, 33,
         31, 32, 31, 33, 32, 33,
     ];
-    // const edges = [0, 1, 1, 2, 2, 3];
-    const edges = zachary;
-    // const n = 4;
-    const n = 34;
 
     console.log('\nEDGE BETWEENNESS');
     ({ modularity, membership } = api.runCommunityDetection('edgeBetweenness', n, edges));

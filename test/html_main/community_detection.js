@@ -1685,7 +1685,7 @@ function isDataURI(filename) {
 
 
 
-var wasmBinaryFile = 'community_detection.wasm';
+var wasmBinaryFile = 'community-detection.wasm';
 if (!isDataURI(wasmBinaryFile)) {
   wasmBinaryFile = locateFile(wasmBinaryFile);
 }

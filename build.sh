@@ -1,7 +1,7 @@
 CURR_DIR=`pwd`
 
 SRC_MAIN=community_detection.c
-MAIN_OUT=community_detection.out.js
+MAIN_OUT=community-detection.js
 
 EXTRA_EXPORTED_RUNTIME_METHODS='["cwrap"]'
 
@@ -28,7 +28,6 @@ else
   export OPTIMIZE="-O0" # debug mode not avaiable without wasm??
 fi
 
-
 export LDFLAGS="${OPTIMIZE}"
 export CFLAGS="${OPTIMIZE}"
 export CXXFLAGS="${OPTIMIZE}"
@@ -47,8 +46,4 @@ emcc \
   $SRC_MAIN \
   $SRC_FILES \
   -o $OUT_DIR/$MAIN_OUT
-
 #  -s ENVIRONMENT="web" \
-
-#  -s MODULARIZE=1 \
-#  -s EXPORT_ES6=1 \

@@ -1,10 +1,11 @@
-importScripts('community-detection.js');
+importScripts('community_detection.out.js');
 
 onmessage = function(e) {
     console.log('Worker: Message received from main script');
     console.log(e.data)
 
     Module.onRuntimeInitialized = async _ => {
+        console.log('Module.onRuntimeInitialized')
         const api = {
             edgeBetweenness: Module.cwrap('edgeBetweenness', 'number', ['number', 'number', 'number']),
             fastGreedy: Module.cwrap('fastGreedy', 'number', ['number', 'number', 'number']),

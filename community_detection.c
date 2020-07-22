@@ -2,6 +2,7 @@
 
 #include <igraph.h>
 #include <emscripten.h>
+#include "config.h"
 
 enum algorithm_name{
     EDGE_BETWEENNESS,
@@ -154,8 +155,8 @@ int runCommunityDetection(
         igraph_vector_push_back(&modularity, max_modularity);
     }
 
-    // TODO wrap into debug mode
-    show_results(&g, &modularity, 0, &membership, seed_membership != 0 ? &seed_membership_v : 0, stdout);
+
+    IGRAPH_DEBUG(show_results(&g, &modularity, 0, &membership, seed_membership != 0 ? &seed_membership_v : 0, stdout));
 
     // Copy result to C arrays
     membership_result = createBuffer(igraph_vector_size(&membership));

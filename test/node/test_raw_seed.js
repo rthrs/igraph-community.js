@@ -1,4 +1,4 @@
-const Module = require('../../dist/wasm/community_detection.out.js');
+const Module = require('../../dist/wasm/community-detection.js');
 
 Module.onRuntimeInitialized = async _ => {
     const api = {
@@ -92,10 +92,16 @@ Module.onRuntimeInitialized = async _ => {
     console.log('\nEDGE BETWEENNESS MOD2 - SEED 1');
     let seedMembership = new Array(n).fill(-1);
     seedMembership[9] = seedMembership[33] = 0;
-    seedMembership[1] = seedMembership[2] = 1;
+    // seedMembership[1] = seedMembership[2] = 1;
+
+    // seedMembership[2] = seedMembership[11] = 0;
+    // seedMembership[11] = seedMembership[2] = 1;
+
+
+    // seedMembership[32] = seedMembership[8] = 0;
     // seedMembership[0] = seedMembership[1] = seedMembership[2] = 0;
     // seedMembership[8] = seedMembership[9] = seedMembership[30] = seedMembership[33] = 1;
-    runCommunityDetection('edgeBetweennessMod2', n, edges, seedMembership);
+    console.log(runCommunityDetection('edgeBetweennessMod2', n, edges, seedMembership));
 
 
     console.log('\nEDGE BETWEENNESS MOD2 - SEED 2');

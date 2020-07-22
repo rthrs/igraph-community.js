@@ -180,7 +180,7 @@
    `char[]'. */
 /* #undef YYTEXT_POINTER */
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define IGRAPH_DEBUG(stmt) \
             do { if (DEBUG) stmt; } while (0);
