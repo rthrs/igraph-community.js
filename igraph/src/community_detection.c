@@ -3,6 +3,7 @@
 #include <igraph.h>
 #include <emscripten.h>
 #include "config.h"
+#include "debug.h"
 
 enum algorithm_name{
     EDGE_BETWEENNESS,

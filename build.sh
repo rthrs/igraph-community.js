@@ -6,7 +6,7 @@ MAIN_OUT=community-detection.js
 EXTRA_EXPORTED_RUNTIME_METHODS='["cwrap"]'
 
 MAIN_SRC_FILES=`find igraph/src -maxdepth 1 \( -name '*.c' -o -name '*.cc' \) \
-  | grep -v -E 'foreign|layout|drl|gengraph|scg|f2c_dummy'`
+  | grep -v -E 'foreign|layout|drl|gengraph|scg'`
 
 F2C_SRC_FILES=`find igraph/src/f2c -name '*.c' | grep -v -E 'main'`
 LAPACK_SRC_FILES=`find igraph/src/lapack -name '*.c'`

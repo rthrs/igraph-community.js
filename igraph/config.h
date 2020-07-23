@@ -156,7 +156,7 @@
 #define PACKAGE_NAME "igraph"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "igraph 0.9.0-pre+6d3f7305"
+#define PACKAGE_STRING "igraph 0.9.0-pre+6e5271d"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "igraph"
@@ -165,7 +165,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.9.0-pre+6d3f7305"
+#define PACKAGE_VERSION "0.9.0-pre+6e5271d"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -174,13 +174,8 @@
 /* #undef TLS */
 
 /* Version number of package */
-#define VERSION "0.9.0-pre+6d3f7305"
+#define VERSION "0.9.0-pre+6e5271d"
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */
 /* #undef YYTEXT_POINTER */
-
-#define DEBUG 1
-
-#define IGRAPH_DEBUG(stmt) \
-            do { if (DEBUG) stmt; } while (0);
