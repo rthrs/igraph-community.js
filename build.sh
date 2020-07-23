@@ -14,7 +14,7 @@ GLPK_SRC_FILES=`find igraph/optional/glpk \( -name '*.c' -o -name '*.cc' \)`
 WALKTRAP_FILES=`find igraph/src -maxdepth 1 -name 'walktrap*.cpp'`
 SPINGLASS_FILES="igraph/src/clustertool.cpp igraph/src/pottsmodel_2.cpp igraph/src/NetRoutines.cpp igraph/src/NetDataTypes.cpp"
 
-SRC_FILES="$MAIN_SRC_FILES $F2C_SRC_FILES $LAPACK_SRC_FILES $GLPK_SRC_FILES $WALKTRAP_FILES $SPINGLASS_FILES"
+SRC_FILES="$F2C_SRC_FILES $MAIN_SRC_FILES $LAPACK_SRC_FILES $GLPK_SRC_FILES $WALKTRAP_FILES $SPINGLASS_FILES"
 #SRC_FILES="$F2C_SRC_FILES $LAPACK_SRC_FILES $MAIN_SRC_FILES $GLPK_SRC_FILES $WALKTRAP_FILES $SPINGLASS_FILES"
 
 # default developement mode and asm.js
@@ -42,15 +42,16 @@ done
 
 if [[ "$ENV" == prod ]]; then
 echo ">>> PRODUCTION MODE"
-  export OPTIMIZE="-O3"
+  export OPTIMIZE_FLAGS="-O3"
 else
   echo ">>> DEVELOPEMENT MODE"
-  export OPTIMIZE="-g4"
+  export DEBUG_FLAGS="-g4"
 fi
 
 if [[ $WASM == 0 ]]; then
   echo ">>> ASM.JS MODE"
   export OUT_DIR=dist/asm
+  export DEBUG_FLAGS="" # debug in asm.js mode not possible
 else
   echo ">>> WASM MODE"
   export OUT_DIR=dist/wasm
@@ -77,9 +78,9 @@ fi
 #  export OPTIMIZE="-O0" # debug mode not avaiable without wasm??
 #fi
 
-export LDFLAGS="${OPTIMIZE}"
-export CFLAGS="${OPTIMIZE}"
-export CXXFLAGS="${OPTIMIZE}"
+export LDFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
+export CFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
+export CXXFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
 #https://developers.google.com/web/updates/2019/01/emscripten-npm
 emcc \
   ${OPTIMIZE} \

@@ -204,7 +204,7 @@ main(void)
 	int Ldef = 0;
 	unsigned int nanbits[2];
 
-	fpinit_ASL();
+//	fpinit_ASL();
 #ifdef WRITE_ARITH_H	/* for Symantec's buggy "make" */
 	f = fopen("arith.h", "w");
 	if (!f) {

@@ -1,4 +1,4 @@
-const Module = require('../../dist/wasm/community_detection.out.js');
+const Module = require('../../dist/wasm/community-detection.js');
 
 Module.onRuntimeInitialized = async _ => {
     const api = {

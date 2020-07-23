@@ -42,6 +42,7 @@
 #include "igraph_centrality.h"
 #include "igraph_structural.h"
 #include "config.h"
+#include "debug.h"
 
 #include <string.h>
 #include <math.h>

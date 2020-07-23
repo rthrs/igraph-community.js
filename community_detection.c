@@ -3,6 +3,7 @@
 #include <igraph.h>
 #include <emscripten.h>
 #include "config.h"
+#include "debug.h"
 
 enum algorithm_name{
     EDGE_BETWEENNESS,
@@ -124,6 +125,10 @@ int runCommunityDetection(
     igraph_vector_init(&modularity, 0);
     igraph_vector_init(&membership, 0);
 
+    // Merges required when passing membership to walktrap algorithm
+    igraph_matrix_t merges;
+    igraph_matrix_init(&merges, 0, 0);
+
     // Algorithm specific variables
     int infomap_nb_trials = 5;
     igraph_real_t codelength;
@@ -167,7 +172,7 @@ int runCommunityDetection(
             break;
         case WALKTRAP:
             // Consider steps as parameter
-            igraph_community_walktrap(&g, /*wights*/ 0, /*steps*/ 4, /*merges*/ 0, &modularity, &membership);
+            igraph_community_walktrap(&g, /*wights*/ 0, /*steps*/ 4, &merges, &modularity, &membership);
             break;
 
 
