@@ -6,15 +6,20 @@
 
 enum algorithm_name{
     EDGE_BETWEENNESS,
-    EDGE_BETWEENNESS_MOD2,
-
     FAST_GREEDY,
-
-    LOUVAIN,
-
     INFOMAP,
+    LABEL_PROPAGATION,
+    LEADING_EIGENVECTOR,
+    LOUVAIN,
+    OPTIMAL,
+    SPINGLASS,
+    WALKTRAP,
 
-    LABEL_PROPAGATION
+    // MODIFICATIONS
+
+    FAST_GREEDY_SEED,
+    LOUVAIN_SEED,
+    EDGE_BETWEENNESS_SEED
 };
 
 
@@ -129,23 +134,56 @@ int runCommunityDetection(
         case EDGE_BETWEENNESS:
             igraph_community_edge_betweenness(&g, 0, 0, 0, 0, &modularity, &membership, IGRAPH_UNDIRECTED, 0);
             break;
-        case EDGE_BETWEENNESS_MOD2:
-            igraph_community_edge_betweenness_mod2(
-                    &g, 0, 0, 0, 0, &modularity, &membership, IGRAPH_UNDIRECTED, 0, &seed_membership_v);
-            break;
         case FAST_GREEDY:
             igraph_community_fastgreedy(&g, 0, 0, &modularity, &membership);
             break;
         case INFOMAP:
-            // TODO add nb_trials parameter; return modularity and codelength
             igraph_community_infomap(&g, 0, 0, infomap_nb_trials, &membership, &codelength);
             igraph_modularity(&g, &membership, &max_modularity, 0);
             break;
         case LABEL_PROPAGATION:
             igraph_community_label_propagation(&g, &membership, 0, /*initial*/ 0, /*fixed*/ 0, &max_modularity);
             break;
+        case LEADING_EIGENVECTOR:
+            // Consider steps as parameter
+            igraph_community_leading_eigenvector(&g, /*weights*/ 0, /*merges*/ 0, &membership, /*steps*/ 0,
+                                                 /*options*/ 0, &max_modularity, /*start*/ 0, /*eigenvalues*/ 0,
+                                                 /*eigenvectors*/ 0, /*history*/ 0, /*callback*/ 0,
+                                                 /*callback_extra*/ 0);
+            break;
         case LOUVAIN:
             igraph_community_multilevel(&g, 0, &membership, 0, &modularity);
+            break;
+        case OPTIMAL:
+            igraph_community_optimal_modularity(&g, &max_modularity, &membership, /*weights*/ 0);
+            break;
+        case SPINGLASS:
+            // Consider spins, starttemp, stoptemp, coolfact, update_rule, gamma as parameters
+            igraph_community_spinglass(&g, /*weights*/ 0, &max_modularity, /*temperature*/ 0, &membership,
+                                       /*csize*/ 0, /*spins*/ 25, /*parallel update*/ 0, /*start temperature*/ 1.0,
+                                       /*stop temperature*/ 0.01, /*cooling factor*/ 0.99,
+                                       IGRAPH_SPINCOMM_UPDATE_CONFIG, /*gamma*/ 1.0,
+                                       IGRAPH_SPINCOMM_IMP_ORIG, /*gamma-=*/ 0);
+            break;
+        case WALKTRAP:
+            // Consider steps as parameter
+            igraph_community_walktrap(&g, /*wights*/ 0, /*steps*/ 4, /*merges*/ 0, &modularity, &membership);
+            break;
+
+
+        // MODIFICATIONS
+
+        case FAST_GREEDY_SEED:
+            igraph_community_fastgreedy_seed(&g, 0, 0, &modularity, &membership, &seed_membership_v);
+            break;
+
+        case LOUVAIN_SEED:
+            igraph_community_multilevel_seed(&g, 0, &membership, 0, &modularity, &seed_membership_v);
+            break;
+
+        case EDGE_BETWEENNESS_SEED:
+            igraph_community_edge_betweenness_seed(&g, 0, 0, 0, 0, &modularity, &membership,
+                                                   IGRAPH_UNDIRECTED, 0, &seed_membership_v);
             break;
         default:
             return 1;
@@ -185,12 +223,6 @@ int edgeBetweenness(igraph_integer_t n, const igraph_real_t *edges, size_t edges
 }
 
 EMSCRIPTEN_KEEPALIVE
-int edgeBetweennessMod2(
-        igraph_integer_t n, const igraph_real_t *edges, size_t edges_len, const igraph_real_t *seed_membership) {
-    return runCommunityDetection(EDGE_BETWEENNESS_MOD2, n, edges, edges_len, seed_membership);
-}
-
-EMSCRIPTEN_KEEPALIVE
 int fastGreedy(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len) {
     return runCommunityDetection(FAST_GREEDY, n, edges, edges_len, 0);
 }
@@ -206,10 +238,49 @@ int labelPropagation(igraph_integer_t n, const igraph_real_t *edges, size_t edge
 }
 
 EMSCRIPTEN_KEEPALIVE
+int leadingEigenvector(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len) {
+    return runCommunityDetection(LEADING_EIGENVECTOR, n, edges, edges_len, 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
 int louvain(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len) {
     return runCommunityDetection(LOUVAIN, n, edges, edges_len, 0);
 }
 
+EMSCRIPTEN_KEEPALIVE
+int optimal(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len) {
+    return runCommunityDetection(OPTIMAL, n, edges, edges_len, 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int spinglass(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len) {
+    return runCommunityDetection(SPINGLASS, n, edges, edges_len, 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int walktrap(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len) {
+    return runCommunityDetection(WALKTRAP, n, edges, edges_len, 0);
+}
+
+// MODIFICATIONS
+
+EMSCRIPTEN_KEEPALIVE
+int fastGreedySeed(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len,
+                   const igraph_real_t *seed_membership) {
+    return runCommunityDetection(FAST_GREEDY_SEED, n, edges, edges_len, seed_membership);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int louvainSeed(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len,
+                const igraph_real_t *seed_membership) {
+    return runCommunityDetection(LOUVAIN_SEED, n, edges, edges_len, seed_membership);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int edgeBetweennessSeed(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len,
+                        const igraph_real_t *seed_membership) {
+    return runCommunityDetection(EDGE_BETWEENNESS_SEED, n, edges, edges_len, seed_membership);
+}
 
 // Helpers
 

@@ -1064,4 +1064,19 @@ int igraph_community_fastgreedy(const igraph_t *graph,
     #undef IGRAPH_FASTCOMM_DEBUG
 #endif
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// FAST GREEDY MODS
 
+/**
+ * \function igraph_community_fastgreedy_seed
+ * \brief CNM Seed
+ */
+int igraph_community_fastgreedy_seed(const igraph_t *graph,
+                                const igraph_vector_t *weights,
+                                igraph_matrix_t *merges,
+                                igraph_vector_t *modularity,
+                                igraph_vector_t *membership,
+                                igraph_vector_t *seed_membership) {
+    // TODO
+    return 0;
+}

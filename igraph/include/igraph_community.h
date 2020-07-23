@@ -117,7 +117,8 @@ DECLDIR int igraph_community_eb_get_merges(const igraph_t *graph,
         igraph_vector_t *membership,
         igraph_vector_t *seed_membership);
 
-DECLDIR int igraph_community_edge_betweenness_mod2(const igraph_t *graph,
+// Girvan-Newman_Seed
+DECLDIR int igraph_community_edge_betweenness_seed(const igraph_t *graph,
                                                    igraph_vector_t *result,
                                                    igraph_vector_t *edge_betweenness,
                                                    igraph_matrix_t *merges,
@@ -134,6 +135,15 @@ DECLDIR int igraph_community_fastgreedy(const igraph_t *graph,
                                         igraph_matrix_t *merges,
                                         igraph_vector_t *modularity,
                                         igraph_vector_t *membership);
+
+// CNM_Seed
+DECLDIR int igraph_community_fastgreedy_seed(const igraph_t *graph,
+                                        const igraph_vector_t *weights,
+                                        igraph_matrix_t *merges,
+                                        igraph_vector_t *modularity,
+                                        igraph_vector_t *membership,
+                                        // NEW PARAM
+                                        igraph_vector_t *seed_membership);
 
 DECLDIR int igraph_community_to_membership(const igraph_matrix_t *merges,
         igraph_integer_t nodes,
@@ -232,6 +242,16 @@ DECLDIR int igraph_community_multilevel(const igraph_t *graph,
                                         igraph_vector_t *membership,
                                         igraph_matrix_t *memberships,
                                         igraph_vector_t *modularity);
+
+// Louvain_Seed
+DECLDIR int igraph_community_multilevel_seed(const igraph_t *graph,
+                                        const igraph_vector_t *weights,
+                                        igraph_vector_t *membership,
+                                        igraph_matrix_t *memberships,
+                                        igraph_vector_t *modularity,
+                                        // NEW PARAM
+                                        igraph_vector_t *seed_membership);
+
 
 DECLDIR int igraph_community_leiden(const igraph_t *graph,
                                     const igraph_vector_t *edge_weights,

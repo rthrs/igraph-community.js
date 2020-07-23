@@ -767,9 +767,10 @@ int igraph_community_edge_betweenness(const igraph_t *graph,
 //// EDGE BETWEENNESS MODS
 
 /**
- * EDGE BETWEENNESS MOD 2
+ * \function igraph_community_edge_betweenness_seed
+ * \brief GN Seed
  */
-int igraph_community_edge_betweenness_mod2(const igraph_t *graph,
+int igraph_community_edge_betweenness_seed(const igraph_t *graph,
                                       igraph_vector_t *result,
                                       igraph_vector_t *edge_betweenness,
                                       igraph_matrix_t *merges,
@@ -3782,6 +3783,25 @@ int igraph_i_compare_communities_rand(const igraph_vector_t *v1,
 int igraph_i_split_join_distance(const igraph_vector_t *v1,
                                  const igraph_vector_t *v2, igraph_integer_t* distance12,
                                  igraph_integer_t* distance21);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// MULTILEVEL MODS
+
+/**
+ * \function igraph_community_multilevel_seed
+ * \brief Louvain Seed
+ */
+DECLDIR int igraph_community_multilevel_seed(const igraph_t *graph,
+                                             const igraph_vector_t *weights,
+                                             igraph_vector_t *membership,
+                                             igraph_matrix_t *memberships,
+                                             igraph_vector_t *modularity,
+                                             igraph_vector_t *seed_membership) {
+    // TODO
+    return 0;
+}
+
+
 
 /**
  * \ingroup communities

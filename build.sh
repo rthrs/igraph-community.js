@@ -5,28 +5,77 @@ MAIN_OUT=community-detection.js
 
 EXTRA_EXPORTED_RUNTIME_METHODS='["cwrap"]'
 
-SRC_FILES=`find igraph/src -maxdepth 1 \( -name '*.c' -o -name '*.cc' \) \
-  | grep -v -E 'foreign|layout|drl|leiden|gengraph|scg'`
+MAIN_SRC_FILES=`find igraph/src -maxdepth 1 \( -name '*.c' -o -name '*.cc' \) \
+  | grep -v -E 'foreign|layout|drl|gengraph|scg|f2c_dummy'`
 
-if [[ "$1" == --prod ]] || [[ "$2" == --prod ]]; then
-  echo ">>> PRODUCTION MODE"
-  export OPTIMIZE="-Os"
+F2C_SRC_FILES=`find igraph/src/f2c -name '*.c' | grep -v -E 'main'`
+LAPACK_SRC_FILES=`find igraph/src/lapack -name '*.c'`
+GLPK_SRC_FILES=`find igraph/optional/glpk \( -name '*.c' -o -name '*.cc' \)`
+WALKTRAP_FILES=`find igraph/src -maxdepth 1 -name 'walktrap*.cpp'`
+SPINGLASS_FILES="igraph/src/clustertool.cpp igraph/src/pottsmodel_2.cpp igraph/src/NetRoutines.cpp igraph/src/NetDataTypes.cpp"
+
+SRC_FILES="$MAIN_SRC_FILES $F2C_SRC_FILES $LAPACK_SRC_FILES $GLPK_SRC_FILES $WALKTRAP_FILES $SPINGLASS_FILES"
+#SRC_FILES="$F2C_SRC_FILES $LAPACK_SRC_FILES $MAIN_SRC_FILES $GLPK_SRC_FILES $WALKTRAP_FILES $SPINGLASS_FILES"
+
+# default developement mode and asm.js
+ENV=dev
+WASM=1
+
+#https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+for i in "$@"; do
+  case $i in
+    -p|--production)
+    ENV=prod
+    shift
+    ;;
+    -a|--asm)
+    WASM=0
+    shift
+    ;;
+    *)
+    # unknown option
+    ;;
+  esac
+done
+
+#  set EMCC_DEBUG=1 to see verbose emcc output
+
+if [[ "$ENV" == prod ]]; then
+echo ">>> PRODUCTION MODE"
+  export OPTIMIZE="-O3"
 else
   echo ">>> DEVELOPEMENT MODE"
-  export EMCC_DEBUG=1
-  export OPTIMIZE="-O0 -g4"
+  export OPTIMIZE="-g4"
 fi
 
-if [[ "$1" == --wasm ]] || [[ "$2" == --wasm ]]; then
-  echo ">>> WASM MODE"
-  export WASM=1
-  export OUT_DIR=dist/wasm
-else
+if [[ $WASM == 0 ]]; then
   echo ">>> ASM.JS MODE"
-  export WASM=0
   export OUT_DIR=dist/asm
-  export OPTIMIZE="-O0" # debug mode not avaiable without wasm??
+else
+  echo ">>> WASM MODE"
+  export OUT_DIR=dist/wasm
 fi
+
+
+#if [[ "$1" == --prod ]] || [[ "$2" == --prod ]]; then
+#  echo ">>> PRODUCTION MODE"
+#  export OPTIMIZE="-Os"
+#else
+#  echo ">>> DEVELOPEMENT MODE"
+#  export EMCC_DEBUG=1
+#  export OPTIMIZE="-O0 -g4"
+#fi
+
+#if [[ "$1" == --wasm ]] || [[ "$2" == --wasm ]]; then
+#  echo ">>> WASM MODE"
+#  export WASM=1
+#  export OUT_DIR=dist/wasm
+#else
+#  echo ">>> ASM.JS MODE"
+#  export WASM=0
+#  export OUT_DIR=dist/asm
+#  export OPTIMIZE="-O0" # debug mode not avaiable without wasm??
+#fi
 
 export LDFLAGS="${OPTIMIZE}"
 export CFLAGS="${OPTIMIZE}"
@@ -47,3 +96,6 @@ emcc \
   $SRC_FILES \
   -o $OUT_DIR/$MAIN_OUT
 #  -s ENVIRONMENT="web" \
+#
+#-I $CURR_DIR/igraph/src/f2c \
+#  -I $CURR_DIR/igraph/src/lapack \

@@ -23,31 +23,31 @@
 
 #include <float.h>
 
-double digitsdbl_(double x) {
-    return (double) DBL_MANT_DIG;
-}
-
-double epsilondbl_(double x) {
-    return DBL_EPSILON;
-}
-
-double hugedbl_(double x) {
-    return DBL_MAX;
-}
-
-double tinydbl_(double x) {
-    return DBL_MIN;
-}
-
-int maxexponentdbl_(double x) {
-    return DBL_MAX_EXP;
-}
-
-int minexponentdbl_(double x) {
-    return DBL_MIN_EXP;
-}
-
-double radixdbl_(double x) {
-    return (double) FLT_RADIX;
-}
+//double digitsdbl_(double x) {
+//    return (double) DBL_MANT_DIG;
+//}
+//
+//double epsilondbl_(double x) {
+//    return DBL_EPSILON;
+//}
+//
+//double hugedbl_(double x) {
+//    return DBL_MAX;
+//}
+//
+//double tinydbl_(double x) {
+//    return DBL_MIN;
+//}
+//
+//int maxexponentdbl_(double x) {
+//    return DBL_MAX_EXP;
+//}
+//
+//int minexponentdbl_(double x) {
+//    return DBL_MIN_EXP;
+//}
+//
+//double radixdbl_(double x) {
+//    return (double) FLT_RADIX;
+//}
 
