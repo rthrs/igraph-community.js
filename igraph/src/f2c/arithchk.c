@@ -196,63 +196,63 @@ get_nanbits(unsigned int *b, int k)
 	b[1] = u.z[1];
 	}
 
- int
-main(void)
-{
-	FILE *f;
-	Akind *a = 0;
-	int Ldef = 0;
-	unsigned int nanbits[2];
-
-//	fpinit_ASL();
-#ifdef WRITE_ARITH_H	/* for Symantec's buggy "make" */
-	f = fopen("arith.h", "w");
-	if (!f) {
-		printf("Cannot open arith.h\n");
-		return 1;
-		}
-#else
-	f = stdout;
-#endif
-
-	if (sizeof(double) == 2*sizeof(long))
-		a = Lcheck();
-	else if (sizeof(double) == 2*sizeof(int)) {
-		Ldef = 1;
-		a = icheck();
-		}
-	else if (sizeof(double) == sizeof(long))
-		a = ccheck();
-	if (a) {
-		fprintf(f, "#define %s\n#define Arith_Kind_ASL %d\n",
-			a->name, a->kind);
-		if (Ldef)
-			fprintf(f, "#define Long int\n#define Intcast (int)(long)\n");
-		if (dalign)
-			fprintf(f, "#define Double_Align\n");
-		if (sizeof(char*) == 8)
-			fprintf(f, "#define X64_bit_pointers\n");
-#ifndef NO_LONG_LONG
-		if (sizeof(long long) < 8)
-#endif
-			fprintf(f, "#define NO_LONG_LONG\n");
-		if (a->kind <= 2) {
-			if (fzcheck())
-				fprintf(f, "#define Sudden_Underflow\n");
-			t_nan = -a->kind;
-			if (need_nancheck())
-				fprintf(f, "#define NANCHECK\n");
-			if (sizeof(double) == 2*sizeof(unsigned int)) {
-				get_nanbits(nanbits, a->kind);
-				fprintf(f, "#define QNaN0 0x%x\n", nanbits[0]);
-				fprintf(f, "#define QNaN1 0x%x\n", nanbits[1]);
-				}
-			}
-		return 0;
-		}
-	fprintf(f, "/* Unknown arithmetic */\n");
-	return 1;
-	}
+// int
+//main(void)
+//{
+//	FILE *f;
+//	Akind *a = 0;
+//	int Ldef = 0;
+//	unsigned int nanbits[2];
+//
+////	fpinit_ASL();
+//#ifdef WRITE_ARITH_H	/* for Symantec's buggy "make" */
+//	f = fopen("arith.h", "w");
+//	if (!f) {
+//		printf("Cannot open arith.h\n");
+//		return 1;
+//		}
+//#else
+//	f = stdout;
+//#endif
+//
+//	if (sizeof(double) == 2*sizeof(long))
+//		a = Lcheck();
+//	else if (sizeof(double) == 2*sizeof(int)) {
+//		Ldef = 1;
+//		a = icheck();
+//		}
+//	else if (sizeof(double) == sizeof(long))
+//		a = ccheck();
+//	if (a) {
+//		fprintf(f, "#define %s\n#define Arith_Kind_ASL %d\n",
+//			a->name, a->kind);
+//		if (Ldef)
+//			fprintf(f, "#define Long int\n#define Intcast (int)(long)\n");
+//		if (dalign)
+//			fprintf(f, "#define Double_Align\n");
+//		if (sizeof(char*) == 8)
+//			fprintf(f, "#define X64_bit_pointers\n");
+//#ifndef NO_LONG_LONG
+//		if (sizeof(long long) < 8)
+//#endif
+//			fprintf(f, "#define NO_LONG_LONG\n");
+//		if (a->kind <= 2) {
+//			if (fzcheck())
+//				fprintf(f, "#define Sudden_Underflow\n");
+//			t_nan = -a->kind;
+//			if (need_nancheck())
+//				fprintf(f, "#define NANCHECK\n");
+//			if (sizeof(double) == 2*sizeof(unsigned int)) {
+//				get_nanbits(nanbits, a->kind);
+//				fprintf(f, "#define QNaN0 0x%x\n", nanbits[0]);
+//				fprintf(f, "#define QNaN1 0x%x\n", nanbits[1]);
+//				}
+//			}
+//		return 0;
+//		}
+//	fprintf(f, "/* Unknown arithmetic */\n");
+//	return 1;
+//	}
 
 #ifdef __sun
 #ifdef __i386

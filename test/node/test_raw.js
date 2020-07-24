@@ -1,13 +1,45 @@
+const { ZKC } = require('../graphs');
+const { printAlgorithmName } = require('../utils');
+
 const Module = require('../../dist/wasm/community-detection.js');
+
+const ALGORITHMS = [
+    'edgeBetweenness',
+    'fastGreedy',
+    'infomap',
+    'labelPropagation',
+    'leadingEigenvector',
+    'louvain',
+    'optimal',
+    'spinglass',
+    'walktrap'
+];
+
+const ALGORITHMS_SEEDS = [
+    'fastGreedySeed',
+    'louvainSeed',
+    'edgeBetweennessSeed'
+];
 
 Module.onRuntimeInitialized = async _ => {
     const api = {
+        // Main algorithms
         edgeBetweenness: Module.cwrap('edgeBetweenness', 'number', ['number', 'number', 'number']),
         fastGreedy: Module.cwrap('fastGreedy', 'number', ['number', 'number', 'number']),
         infomap: Module.cwrap('infomap', 'number', ['number', 'number', 'number']),
         labelPropagation: Module.cwrap('labelPropagation', 'number', ['number', 'number', 'number']),
+        leadingEigenvector: Module.cwrap('leadingEigenvector', 'number', ['number', 'number', 'number']),
         louvain: Module.cwrap('louvain', 'number', ['number', 'number', 'number']),
+        optimal: Module.cwrap('optimal', 'number', ['number', 'number', 'number']),
+        spinglass: Module.cwrap('spinglass', 'number', ['number', 'number', 'number']),
+        walktrap: Module.cwrap('walktrap', 'number', ['number', 'number', 'number']),
 
+        // Seed algorithms
+        fastGreedySeed: Module.cwrap('fastGreedySeed', 'number', ['number', 'number', 'number', 'number']),
+        louvainSeed: Module.cwrap('louvainSeed', 'number', ['number', 'number', 'number', 'number']),
+        edgeBetweennessSeed: Module.cwrap('edgeBetweennessSeed', 'number', ['number', 'number', 'number', 'number']),
+
+        // Helpers
         createBuffer: Module.cwrap('createBuffer', 'number', ['number']),
         create_buffer: Module.cwrap('create_buffer', 'number', ['number', 'number']),
         destroyBuffer: Module.cwrap('destroyBuffer', '', ['number']),
@@ -20,18 +52,32 @@ Module.onRuntimeInitialized = async _ => {
     };
 
     // @edges: undirected edges list, the first two elements are the first edge, etc.
-    function runCommunityDetection(algorithmName, n, edges) {
+    function runCommunityDetection(algorithmName, n, edges, options = {}) {
+        const { seedMembership = null } = options;
+
         const edgesPointer = api.createBuffer(edges.length);
         const uint8Edges = new Uint8Array(new Float64Array(edges).buffer);
         Module.HEAP8.set(uint8Edges, edgesPointer);
 
-        api[algorithmName](n, edgesPointer, edges.length);
+        const args = [n, edgesPointer, edges.length];
+        let seedMembershipPointer;
+        if (seedMembership) {
+            seedMembershipPointer = api.createBuffer(seedMembership.length);
+            const uint8SeedMembership = new Uint8Array(new Float64Array(seedMembership).buffer);
+            Module.HEAP8.set(uint8SeedMembership, seedMembershipPointer);
+
+            args.push(seedMembershipPointer);
+        }
+        api[algorithmName](...args);
 
         const membership = getResultData(api.getMembershipPointer(), n);
         const modularity = getResultData(api.getModularityPointer(), api.getModularitySize());
 
         api.freeResult();
         api.destroyBuffer(edgesPointer);
+        if (seedMembershipPointer) {
+            api.destroyBuffer(seedMembershipPointer);
+        }
 
         return {
             modularity,
@@ -44,52 +90,28 @@ Module.onRuntimeInitialized = async _ => {
         return new Float64Array(resultView);
     }
 
-    let modularity, membership;
-    const zachary = [
-        0,  1,  0,  2,  0,  3,  0,  4,  0,  5,
-        0,  6,  0,  7,  0,  8,  0, 10,  0, 11,
-        0, 12,  0, 13,  0, 17,  0, 19,  0, 21,
-        0, 31,  1,  2,  1,  3,  1,  7,  1, 13,
-        1, 17,  1, 19,  1, 21,  1, 30,  2,  3,
-        2,  7,  2,  8,  2,  9,  2, 13,  2, 27,
-        2, 28,  2, 32,  3,  7,  3, 12,  3, 13,
-        4,  6,  4, 10,  5,  6,  5, 10,  5, 16,
-        6, 16,  8, 30,  8, 32,  8, 33,  9, 33,
-        13, 33, 14, 32, 14, 33, 15, 32, 15, 33,
-        18, 32, 18, 33, 19, 33, 20, 32, 20, 33,
-        22, 32, 22, 33, 23, 25, 23, 27, 23, 29,
-        23, 32, 23, 33, 24, 25, 24, 27, 24, 31,
-        25, 31, 26, 29, 26, 33, 27, 33, 28, 31,
-        28, 33, 29, 32, 29, 33, 30, 32, 30, 33,
-        31, 32, 31, 33, 32, 33,
-    ];
-    // const edges = [0, 1, 1, 2, 2, 3];
-    const edges = zachary;
-    // const n = 4;
-    const n = 34;
+    const { n, edges } = ZKC;
 
-    console.log('\nEDGE BETWEENNESS');
-    ({ modularity, membership } = runCommunityDetection('edgeBetweenness', n, edges));
-    console.log(modularity);
-    console.log(membership);
+    ALGORITHMS.forEach((name) => {
+        printAlgorithmName(name);
+        const { modularity, membership } = runCommunityDetection(name, n, edges);
+        console.log(`membership: [${membership}]`);
+        console.log(`modularity: [${modularity}]`);
+        console.log(`MAX modularity found: ${modularity.reduce((a, b) => Math.max(a,b), Number.MIN_VALUE)}`);
+    });
 
-    console.log('\nFAST GREEDY');
-    ({ modularity, membership } = runCommunityDetection('fastGreedy', n, edges));
-    console.log(modularity);
-    console.log(membership);
+    const seedMembership = new Array(n).fill(-1);
+    seedMembership[33] = seedMembership[31] = 0;
+    seedMembership[0] = seedMembership[4] = 1;
 
-    console.log('\nINFOMAP');
-    ({ modularity, membership } = runCommunityDetection('infomap', n, edges));
-    console.log(modularity);
-    console.log(membership);
 
-    console.log('\nLABEL PROPAGATION');
-    ({ modularity, membership } = runCommunityDetection('labelPropagation', n, edges));
-    console.log(modularity);
-    console.log(membership);
+    // FIXME - modularity 29.0 for EB seeds
+    // seedMembership = [-1, -1, 0, -1, -1, -1, -1, -1, 0, 0, -1, -1, -1, -1, 0, 0, -1, -1, 0, -1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-    console.log('\nLOUVAIN');
-    ({ modularity, membership } = runCommunityDetection('louvain', n, edges));
-    console.log(modularity);
-    console.log(membership);
+    ALGORITHMS_SEEDS.forEach((name) => {
+        printAlgorithmName(name);
+        const { modularity, membership } = runCommunityDetection(name, n, edges, { seedMembership });
+        console.log(`modularity: [${modularity}]`);
+        console.log(`membership: [${membership}]`);
+    });
 };

@@ -15,7 +15,6 @@ WALKTRAP_FILES=`find igraph/src -maxdepth 1 -name 'walktrap*.cpp'`
 SPINGLASS_FILES="igraph/src/clustertool.cpp igraph/src/pottsmodel_2.cpp igraph/src/NetRoutines.cpp igraph/src/NetDataTypes.cpp"
 
 SRC_FILES="$F2C_SRC_FILES $MAIN_SRC_FILES $LAPACK_SRC_FILES $GLPK_SRC_FILES $WALKTRAP_FILES $SPINGLASS_FILES"
-#SRC_FILES="$F2C_SRC_FILES $LAPACK_SRC_FILES $MAIN_SRC_FILES $GLPK_SRC_FILES $WALKTRAP_FILES $SPINGLASS_FILES"
 
 # default developement mode and asm.js
 ENV=dev
@@ -38,52 +37,31 @@ for i in "$@"; do
   esac
 done
 
-#  set EMCC_DEBUG=1 to see verbose emcc output
-
 if [[ "$ENV" == prod ]]; then
 echo ">>> PRODUCTION MODE"
   export OPTIMIZE_FLAGS="-O3"
 else
   echo ">>> DEVELOPEMENT MODE"
-  export DEBUG_FLAGS="-g4"
+  export DEBUG_FLAGS="-g4 -DIGRAPHJS_DEBUG"
 fi
 
 if [[ $WASM == 0 ]]; then
   echo ">>> ASM.JS MODE"
   export OUT_DIR=dist/asm
-  export DEBUG_FLAGS="" # debug in asm.js mode not possible
+  export DEBUG_FLAGS="-DIGRAPHJS_DEBUG" # debug in asm.js mode not possible
 else
   echo ">>> WASM MODE"
   export OUT_DIR=dist/wasm
 fi
 
-
-#if [[ "$1" == --prod ]] || [[ "$2" == --prod ]]; then
-#  echo ">>> PRODUCTION MODE"
-#  export OPTIMIZE="-Os"
-#else
-#  echo ">>> DEVELOPEMENT MODE"
-#  export EMCC_DEBUG=1
-#  export OPTIMIZE="-O0 -g4"
-#fi
-
-#if [[ "$1" == --wasm ]] || [[ "$2" == --wasm ]]; then
-#  echo ">>> WASM MODE"
-#  export WASM=1
-#  export OUT_DIR=dist/wasm
-#else
-#  echo ">>> ASM.JS MODE"
-#  export WASM=0
-#  export OUT_DIR=dist/asm
-#  export OPTIMIZE="-O0" # debug mode not avaiable without wasm??
-#fi
-
 export LDFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
 export CFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
 export CXXFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
-#https://developers.google.com/web/updates/2019/01/emscripten-npm
+
+# Set EMCC_DEBUG=1 to see verbose emcc output
+# https://developers.google.com/web/updates/2019/01/emscripten-npm
 emcc \
-  ${OPTIMIZE} \
+  ${CFLAGS} \
   -s STRICT=1 \
   -s WASM=$WASM \
   -s MALLOC=emmalloc \
@@ -95,8 +73,6 @@ emcc \
   -I $CURR_DIR/igraph/optional/glpk/ \
   $SRC_MAIN \
   $SRC_FILES \
-  -o $OUT_DIR/$MAIN_OUT
-#  -s ENVIRONMENT="web" \
-#
-#-I $CURR_DIR/igraph/src/f2c \
-#  -I $CURR_DIR/igraph/src/lapack \
+  -o $OUT_DIR/$MAIN_OUT \
+  --no-entry
+#  -s ENVIRONMENT="web"

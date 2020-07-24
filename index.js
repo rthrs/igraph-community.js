@@ -1,6 +1,24 @@
+const ALGORITHM_NAMES = [
+    'edgeBetweenness',
+    'fastGreedy',
+    'infomap',
+    'labelPropagation',
+    'leadingEigenvector',
+    'louvain',
+    'optimal',
+    'spinglass',
+    'walktrap'
+];
+
+const SEED_ALGORITHM_NAMES = [
+    'fastGreedySeed',
+    'louvainSeed',
+    'edgeBetweennessSeed'
+];
+
 let publicAPI = null;
 
-const loadIgraphCommunityAPI = ({ wasm = false, onLoad = () => {} } = {}) =>
+const getAPI = ({ wasm = true, onLoad = () => {} } = {}) =>
     new Promise(((resolve, reject) => {
         if (publicAPI) {
             resolve(publicAPI);
@@ -14,22 +32,31 @@ const loadIgraphCommunityAPI = ({ wasm = false, onLoad = () => {} } = {}) =>
         }
     }));
 
-const ModuleASM = require('./dist/asm/community-detection.js');
-const ModuleWASM = require('./dist/wasm/community_detection.out.js');
-
+// const ModuleASM = require('./dist/asm/community-detection.js');
+// const ModuleWASM = require('./dist/wasm/community_detection.out.js');
+console.log(__dirname);
 function loadPublicAPI(onLoaded, wasm) {
-    const Module = wasm ? ModuleWASM : ModuleASM;
+    const Module = wasm ? require('./dist/wasm/community-detection.js') : require('./dist/asm/community-detection.js');
 
     Module.onRuntimeInitialized = async _ => {
         const api = {
+            // Main algorithms
             edgeBetweenness: Module.cwrap('edgeBetweenness', 'number', ['number', 'number', 'number']),
-            edgeBetweennessMod2: Module.cwrap('edgeBetweennessMod2', 'number', ['number', 'number', 'number', 'number']),
-
             fastGreedy: Module.cwrap('fastGreedy', 'number', ['number', 'number', 'number']),
             infomap: Module.cwrap('infomap', 'number', ['number', 'number', 'number']),
             labelPropagation: Module.cwrap('labelPropagation', 'number', ['number', 'number', 'number']),
+            leadingEigenvector: Module.cwrap('leadingEigenvector', 'number', ['number', 'number', 'number']),
             louvain: Module.cwrap('louvain', 'number', ['number', 'number', 'number']),
+            optimal: Module.cwrap('optimal', 'number', ['number', 'number', 'number']),
+            spinglass: Module.cwrap('spinglass', 'number', ['number', 'number', 'number']),
+            walktrap: Module.cwrap('walktrap', 'number', ['number', 'number', 'number']),
 
+            // Seed algorithms
+            fastGreedySeed: Module.cwrap('fastGreedySeed', 'number', ['number', 'number', 'number', 'number']),
+            louvainSeed: Module.cwrap('louvainSeed', 'number', ['number', 'number', 'number', 'number']),
+            edgeBetweennessSeed: Module.cwrap('edgeBetweennessSeed', 'number', ['number', 'number', 'number', 'number']),
+
+            // Helpers
             createBuffer: Module.cwrap('createBuffer', 'number', ['number']),
             create_buffer: Module.cwrap('create_buffer', 'number', ['number', 'number']),
             destroyBuffer: Module.cwrap('destroyBuffer', '', ['number']),
@@ -42,7 +69,9 @@ function loadPublicAPI(onLoaded, wasm) {
         };
 
         // @edges: undirected edges list, the first two elements are the first edge, etc.
-        function runCommunityDetection(algorithmName, n, edges, seedMembership = null) {
+        function runCommunityDetection(algorithmName, n, edges, options = {}) {
+            const { seedMembership = null } = options;
+
             const edgesPointer = api.createBuffer(edges.length);
             const uint8Edges = new Uint8Array(new Float64Array(edges).buffer);
             Module.HEAP8.set(uint8Edges, edgesPointer);
@@ -86,4 +115,8 @@ function loadPublicAPI(onLoaded, wasm) {
     };
 }
 
-module.exports = loadIgraphCommunityAPI;
+module.exports = {
+    getAPI,
+    ALGORITHM_NAMES,
+    SEED_ALGORITHM_NAMES
+};
