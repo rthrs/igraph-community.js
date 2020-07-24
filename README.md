@@ -64,16 +64,16 @@ igraphCommunity.getAPI().then((api) => {
 
 ### runCommunityDetection
 
-```
-runCommunityDetection(
+```flow js
+type runCommunityDetection = (
     name: AlgorithmNameType | SeedsAlgorithmNameType,
-    n: Number,
-    edges: Array<Number>,
-    ?options: {| seedMembership: Array<Number> |}
-): {|
-    membership: Array<Number>,
-    modularity: Array<Number>
-|}
+    n: number,
+    edges: Array<number>,
+    options?: {| seedMembership: Array<number> |}
+) => {|
+    membership: Array<number>,
+    modularity: Array<number>
+|};
 ```
 
 ```js
@@ -98,7 +98,7 @@ type SeedsAlgorithmNameType =
 
 Lists of algorithms name is also available in constants: `{ ALGORITHM_NAMES, SEED_ALGORITHM_NAMES } = require('igraph-community')`;
 
-When using algorithms for partially known communities you should pass `seedMembership` option.
+When using algorithms of `SeedsAlgorithmNameType`` for partially known communities you should pass `seedMembership` option.
 
 ```js
 const igraphCommunity = require('igraph-community');
