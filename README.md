@@ -2,9 +2,9 @@
 
 Emscripting [igraph's](https://igraph.org/) community detection algorithms to make them run in JavaScript.
  
-Also provides Clauset-Newman-Moore, Louvain and Girvan-Newman algorithms modifications when partial source communties (seeds) are known.
+Also provides Clauset-Newman-Moore, Louvain and Girvan-Newman algorithms modifications when partial source communities (seeds) are known.
 
-This repository is a fork of `git@github.com:vtraag/igraph.git` on branch `fix/vector_binsearch` (version 0.9.0-pre+6d3f7305)
+This repository is a fork of `git@github.com:vtraag/igraph.git` on branch `fix/vector_binsearch` (version 0.9.0-pre)
 
 # Installation
 
@@ -39,10 +39,12 @@ igraphCommunity.getAPI().then((api) => {
 ```
 
 ## HTML
-TODO
+
+See example from `test/html` directory for reference  (but first copy files from `dist/wasm` or `dist/asm` to your directory).
 
 ## Web Worker
-TODO
+
+See example form `test/worker` directory for reference.
 
 # API
 

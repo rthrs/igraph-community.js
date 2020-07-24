@@ -2,7 +2,7 @@ const { ZKC } = require('../graphs');
 const { printAlgorithmName } = require('../utils');
 const { getAPI, ALGORITHM_NAMES, SEED_ALGORITHM_NAMES } = require('../../index');
 
-getAPI().then((api) => {
+getAPI({ wasm: true }).then((api) => {
     const { runCommunityDetection } = api;
     const { n, edges } = ZKC;
 
