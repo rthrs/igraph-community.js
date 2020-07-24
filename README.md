@@ -6,6 +6,12 @@ Also provides Clauset-Newman-Moore, Louvain and Girvan-Newman algorithms modific
 
 This repository is a fork of `git@github.com:vtraag/igraph.git` on branch `fix/vector_binsearch` (version 0.9.0-pre+6d3f7305)
 
+# Installation
+
+```
+npm install --save git+ssh://git@github.com:rthrs/igraph-community.js.git
+```
+
 # Usage
 
 This library could be run in any JS environment and provides both asm.js and Wasm build modules. It could also be run in a separate Web Worker.
@@ -16,15 +22,19 @@ For seed communities algorithms, membership of vertices to specific communities 
 
 ## Node.js
 ```js
-const n = 4;
-const edges = [0,  1,  0,  2,  0,  3];
+const igraphCommunity = require('igraph-community');
 
-const loadIgraphCommunityAPI = require('../../index'); // TODO
+const graph = {
+    n: 4,
+    edges: [0,  1,  0,  2,  0,  3]
+};
 
-loadIgraphCommunityAPI({ wasm: false }).then((api) => {
-    const { membership, modularity } = api.runCommunityDetection('edgeBetweenness', n, edges);
-    console.log(modularity);
-    console.log(membership);
+igraphCommunity.getAPI().then((api) => {
+    const { runCommunityDetection } = api;
+
+    const algorithmName = 'fastGreedy';
+    const { modularity, membership } = runCommunityDetection(algorithmName, graph.n, graph.edges);
+    console.log(membership, modularity);
 });
 ```
 
@@ -39,6 +49,72 @@ TODO
 Interface includes 9 community detection algorithms from igraph and 3 modifications of them handling seed communities.
 
 Analysis of undirected and unweighted graph is available only so far. Currently, also no additional arguments passing (as in the igraph's documentation) is possible. Check igraph documentation for algorithms reference.
+
+To get API access it is necessary to invoke `getAPI` function first, which returns Promise containing API object.
+
+```js
+const igraphCommunity = require('igraph-community');
+
+igraphCommunity.getAPI().then((api) => {
+    const { runCommunityDetection } = api;
+
+    // do your stuff here...
+});
+``` 
+
+### runCommunityDetection
+
+```
+runCommunityDetection(
+    name: AlgorithmNameType | SeedsAlgorithmNameType,
+    n: Number,
+    edges: Array<Number>,
+    ?options: {| seedMembership: Array<Number> |}
+): {|
+    membership: Array<Number>,
+    modularity: Array<Number>
+|}
+```
+
+```js
+type AlgorithmNameType = 
+      'edgeBetweenness'
+    | 'fastGreedy'
+    | 'infomap'
+    | 'labelPropagation'
+    | 'leadingEigenvector'
+    | 'louvain'
+    | 'optimal'
+    | 'spinglass'
+    | 'walktrap';
+```
+
+```js
+type SeedsAlgorithmNameType = 
+      'louvainSeed'      
+    | 'fastGreedySeed'
+    | 'edgeBetweennessSeed';
+```
+
+Lists of algorithms name is also available in constants: `{ ALGORITHM_NAMES, SEED_ALGORITHM_NAMES } = require('igraph-community')`;
+
+When using algorithms for partially known communities you should pass `seedMembership` option.
+
+```js
+const igraphCommunity = require('igraph-community');
+
+const graph = {
+    n: 4,
+    edges: [0,  1,  0,  2,  0,  3]
+};
+
+const seedMembership = [-1, 0, 0, -1];
+
+igraphCommunity.getAPI().then((api) => {
+    const { runCommunityDetection } = api;
+    runCommunityDetection('louvainSeed', graph.n, graph.edges, { seedMembership });
+});
+```
 
 # Handling evaluation progress
 
