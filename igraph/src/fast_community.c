@@ -30,8 +30,11 @@
 #include "igraph_structural.h"
 #include "igraph_vector_ptr.h"
 #include "config.h"
+#include "hashmap.h"
+#include "debug.h"
+#include <math.h>
 
-/* #define IGRAPH_FASTCOMM_DEBUG */
+// #define IGRAPH_FASTCOMM_DEBUG
 
 #ifdef _MSC_VER
 /* MSVC does not support variadic macros */
@@ -260,6 +263,7 @@ void igraph_i_fastgreedy_community_list_dump_heap(
  * Only useful for debugging. */
 void igraph_i_fastgreedy_community_list_check_heap(
     igraph_i_fastgreedy_community_list* list) {
+    debug("START igraph_i_fastgreedy_community_list_check_heap\n");
     long int i;
     for (i = 0; i < list->no_of_communities / 2; i++) {
         if ((2 * i + 1 < list->no_of_communities && *list->heap[i]->maxdq->dq < *list->heap[2 * i + 1]->maxdq->dq) ||
@@ -751,6 +755,7 @@ int igraph_community_fastgreedy(const igraph_t *graph,
         } else {
             dq[j] = 2 * (1.0 / (no_of_edges * 2.0) - VECTOR(a)[from] * VECTOR(a)[to] / (4.0 * no_of_edges * no_of_edges));
         }
+        debug("(from: %li, to: %li) dq[j]: %f\n", from, to, dq[j]);
         pairs[i].first = from;
         pairs[i].second = to;
         pairs[i].dq = &dq[j];
@@ -830,28 +835,30 @@ int igraph_community_fastgreedy(const igraph_t *graph,
 
         /* Some debug info if needed */
         /* igraph_i_fastgreedy_community_list_check_heap(&communities); */
-#ifdef DEBUG
-        debug("===========================================\n");
-        for (i = 0; i < communities.n; i++) {
-            if (communities.e[i].maxdq == 0) {
-                debug("Community #%ld: PASSIVE\n", i);
-                continue;
+        IGRAPH_DEBUG(do {
+            debug("===========================================\n");
+            igraph_i_fastgreedy_community_list_check_heap(&communities);
+            for (i = 0; i < communities.n; i++) {
+                if (communities.e[i].maxdq == 0) {
+                    debug("Community #%ld: PASSIVE\n", i);
+                    continue;
+                }
+                debug("Community #%ld\n ", i);
+                for (j = 0; j < igraph_vector_ptr_size(&communities.e[i].neis); j++) {
+                    p1 = (igraph_i_fastgreedy_commpair*)VECTOR(communities.e[i].neis)[j];
+                    debug(" (%ld,%ld,%.4f)", p1->first, p1->second, *p1->dq);
+                }
+                p1 = communities.e[i].maxdq;
+                debug("\n  Maxdq: (%ld,%ld,%.4f)\n", p1->first, p1->second, *p1->dq);
             }
-            debug("Community #%ld\n ", i);
-            for (j = 0; j < igraph_vector_ptr_size(&communities.e[i].neis); j++) {
-                p1 = (igraph_i_fastgreedy_commpair*)VECTOR(communities.e[i].neis)[j];
-                debug(" (%ld,%ld,%.4f)", p1->first, p1->second, *p1->dq);
+            debug("Global maxdq is: (%ld,%ld,%.4f)\n", communities.heap[0]->maxdq->first,
+                  communities.heap[0]->maxdq->second, *communities.heap[0]->maxdq->dq);
+            for (i = 0; i < communities.no_of_communities; i++) {
+                debug("(%ld,%ld,%.4f) ", communities.heap[i]->maxdq->first, communities.heap[i]->maxdq->second, *communities.heap[i]->maxdq->dq);
             }
-            p1 = communities.e[i].maxdq;
-            debug("\n  Maxdq: (%ld,%ld,%.4f)\n", p1->first, p1->second, *p1->dq);
-        }
-        debug("Global maxdq is: (%ld,%ld,%.4f)\n", communities.heap[0]->maxdq->first,
-              communities.heap[0]->maxdq->second, *communities.heap[0]->maxdq->dq);
-        for (i = 0; i < communities.no_of_communities; i++) {
-            debug("(%ld,%ld,%.4f) ", communities.heap[i]->maxdq->first, communities.heap[i]->maxdq->second, *communities.heap[0]->maxdq->dq);
-        }
-        debug("\n");
-#endif
+            debug("\n");
+        } while(0));
+
         if (communities.heap[0] == 0) {
             break;    /* no more communities */
         }
@@ -1066,6 +1073,103 @@ int igraph_community_fastgreedy(const igraph_t *graph,
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// FAST GREEDY MODS
+int igraph_community_to_membership_with_initial_membership(const igraph_matrix_t *merges,
+                                                           igraph_integer_t nodes,
+                                                           igraph_integer_t steps,
+                                                           igraph_vector_t *membership
+) {
+
+    long int no_of_nodes = nodes;
+    long int components = no_of_nodes - steps;
+    long int i, found = 0;
+    igraph_vector_t tmp;
+
+    if (steps > igraph_matrix_nrow(merges)) {
+        IGRAPH_ERROR("`steps' to big or `merges' matrix too short", IGRAPH_EINVAL);
+    }
+
+    // TODO try to do this in linear time...
+    debug("DO MERGE...\n");
+    for (i = 0; i < steps; i++) {
+        long int c1 = (long int) MATRIX(*merges, i, 0);
+        long int c2 = (long int) MATRIX(*merges, i, 1);
+        // merge c2 into c1
+        debug("merge %li, %li\n", c1, c2);
+        for (long int j = 0; j < no_of_nodes; j++) {
+            long int act = VECTOR(*membership)[j];
+            if (act == c2) {
+                VECTOR(*membership)[j] = c1;
+            }
+        }
+    }
+
+    IGRAPH_CHECK(igraph_reindex_membership(membership, 0, NULL));
+
+    return 0;
+}
+
+
+long int get_number_len(long int num) {
+    if (num == 0) {
+        return 1;
+    }
+    return (long int)(floor(log10(num)) + 1);
+}
+
+int calculate_initial_eij(const struct hashmap_s *eij_map, const igraph_t *graph, igraph_vector_t *membership) {
+    igraph_eit_t edgeit;
+    IGRAPH_CHECK(igraph_eit_create(graph, igraph_ess_all(0), &edgeit));
+    IGRAPH_FINALLY(igraph_eit_destroy, &edgeit);
+
+    igraph_integer_t ffrom, fto;
+
+    for (;!IGRAPH_EIT_END(edgeit); IGRAPH_EIT_NEXT(edgeit)) {
+        long int eidx = IGRAPH_EIT_GET(edgeit);
+        igraph_edge(graph, (igraph_integer_t) eidx, &ffrom, &fto);
+
+        long int comm_from = VECTOR(*membership)[(long int) ffrom];
+        long int comm_to = VECTOR(*membership)[(long int) fto];
+        debug("%li\n", get_number_len(10));
+        debug("comm_from %li, comm_to %li\n", comm_from, comm_to);
+
+        ////// create str pair for hash map
+        long int pair_len = get_number_len(comm_from) + get_number_len(comm_to) + 1;
+        char *pair_code = (char*)malloc((pair_len +1) * sizeof(char));
+
+        // convention: always comm_from id <= comm_to id
+        if (comm_from > comm_to) {
+            long int tmp = comm_to;
+            comm_to = comm_from;
+            comm_from = tmp;
+        }
+
+        sprintf(pair_code, "%li,%li", comm_from, comm_to);
+        //////
+
+        debug("create pair eij: %s (%li)\n", pair_code, pair_len);
+
+        void* const element = hashmap_get(eij_map, pair_code, pair_len);
+        if (NULL == element) {
+            long int *val = (long int*)malloc (sizeof (long int));
+            *val = 1;
+
+            if (0 != hashmap_put(eij_map, pair_code, pair_len, val)) {
+                IGRAPH_ERROR("fast greedy: hashmap put error (insert eij)", IGRAPH_ENOMEM);
+            } else {
+                debug("inserted NEW PAIR\n");
+            }
+        } else {
+            long int *val = (long int *)element;
+            *val = *val + 1;
+            debug("eij UPDATE to: %li\n", *val);
+        }
+    }
+
+    igraph_eit_destroy(&edgeit);
+    IGRAPH_FINALLY_CLEAN(1);
+
+    return 0;
+}
 
 /**
  * \function igraph_community_fastgreedy_seed
@@ -1077,6 +1181,699 @@ int igraph_community_fastgreedy_seed(const igraph_t *graph,
                                 igraph_vector_t *modularity,
                                 igraph_vector_t *membership,
                                 igraph_vector_t *seed_membership) {
-    // TODO
+    long int no_of_edges, no_of_nodes, no_of_joins, total_joins, no_of_initial_communities;
+    long int i, j, k, n, m, from, to, dummy, best_no_of_joins;
+    igraph_integer_t ffrom, fto;
+    igraph_eit_t edgeit;
+    igraph_i_fastgreedy_commpair *pairs, *p1, *p2;
+    igraph_i_fastgreedy_community_list communities;
+    igraph_vector_t a, degrees;
+    igraph_real_t q, *dq, bestq, weight_sum, loop_weight_sum;
+    igraph_bool_t has_multiple;
+    igraph_matrix_t merges_local;
+
+    no_of_nodes = igraph_vcount(graph);
+    no_of_edges = igraph_ecount(graph);
+
+    if (igraph_is_directed(graph)) {
+        IGRAPH_ERROR("fast greedy community detection works for undirected graphs only", IGRAPH_UNIMPLEMENTED);
+    }
+
+    //// MOD calculate no of nodes in seed communities
+    IGRAPH_DEBUG(do {
+        printf("SEED membership: [");
+        for (i = 0; i < igraph_vector_size(seed_membership); i++) {
+            printf("%li", (long int)VECTOR(*seed_membership)[i]);
+            if (i != igraph_vector_size(seed_membership) - 1) {
+                printf(", ");
+            }
+        }
+        printf("]\n");
+    } while(0));
+
+    long int no_of_seed_communities = -1;
+    long int no_of_nodes_in_seed_communities = 0;
+
+    for (i = 0; i < no_of_nodes; i++) {
+        long int act = VECTOR(*seed_membership)[i];
+        if (act > no_of_seed_communities) {
+            no_of_seed_communities = act; // max id of seed community +1 is the number of seed communities
+        }
+        if (act > -1) {
+            no_of_nodes_in_seed_communities++;
+        }
+    }
+    no_of_seed_communities = no_of_seed_communities + 1; // when no seeds then max val == -1
+
+    no_of_initial_communities = no_of_seed_communities + (no_of_nodes - no_of_nodes_in_seed_communities);
+    total_joins = no_of_initial_communities - 1;
+    total_joins = total_joins < 0 ? 0 : total_joins; // TODO check if this is okay...
+    //// END MOD
+
+
+    if (weights != 0) {
+        if (igraph_vector_size(weights) < igraph_ecount(graph)) {
+            IGRAPH_ERROR("fast greedy community detection: weight vector too short", IGRAPH_EINVAL);
+        }
+        if (igraph_vector_any_smaller(weights, 0)) {
+            IGRAPH_ERROR("weights must be positive", IGRAPH_EINVAL);
+        }
+        weight_sum = igraph_vector_sum(weights);
+    } else {
+        weight_sum = no_of_edges;
+    }
+
+    IGRAPH_CHECK(igraph_has_multiple(graph, &has_multiple));
+    if (has_multiple) {
+        IGRAPH_ERROR("fast-greedy community finding works only on graphs without multiple edges", IGRAPH_EINVAL);
+    }
+
+    if (membership != 0 && merges == 0) {
+        /* We need the merge matrix because the user wants the membership
+         * vector, so we allocate one on our own */
+        IGRAPH_CHECK(igraph_matrix_init(&merges_local, total_joins, 2));
+        IGRAPH_FINALLY(igraph_matrix_destroy, &merges_local);
+        merges = &merges_local;
+    }
+
+    if (merges != 0) {
+        IGRAPH_CHECK(igraph_matrix_resize(merges, total_joins, 2));
+        igraph_matrix_null(merges);
+    }
+
+    if (modularity != 0) {
+        IGRAPH_CHECK(igraph_vector_resize(modularity, total_joins + 1));
+    }
+
+    //// MOD adapt a vector to mods; we care about unweighted graphs only
+    if (weights) {
+        IGRAPH_ERROR("unweighted graphs only", IGRAPH_EINVAL);
+    }
+    //// END MOD
+
+    /* Create list of communities */
+    debug("Creating community list\n");
+    communities.n = no_of_initial_communities;
+
+    //// MOD
+    communities.no_of_communities = no_of_initial_communities;
+    communities.e = (igraph_i_fastgreedy_community*)calloc((size_t) no_of_initial_communities, sizeof(igraph_i_fastgreedy_community));
+    if (communities.e == 0) {
+        IGRAPH_ERROR("can't run fast greedy community detection", IGRAPH_ENOMEM);
+    }
+    IGRAPH_FINALLY(free, communities.e);
+    communities.heap = (igraph_i_fastgreedy_community**)calloc((size_t) no_of_initial_communities, sizeof(igraph_i_fastgreedy_community*));
+    if (communities.heap == 0) {
+        IGRAPH_ERROR("can't run fast greedy community detection", IGRAPH_ENOMEM);
+    }
+    IGRAPH_FINALLY(free, communities.heap);
+    communities.heapindex = (igraph_integer_t*)calloc((size_t)no_of_initial_communities, sizeof(igraph_integer_t));
+    if (communities.heapindex == 0) {
+        IGRAPH_ERROR("can't run fast greedy community detection", IGRAPH_ENOMEM);
+    }
+    IGRAPH_FINALLY_CLEAN(2);
+    IGRAPH_FINALLY(igraph_i_fastgreedy_community_list_destroy, &communities);
+
+    // Create initial communities based on seed membership
+    // First init structures for seeds
+    for (i = 0; i < no_of_seed_communities; i++) {
+        igraph_vector_ptr_init(&communities.e[i].neis, 0);
+        communities.e[i].id = (igraph_integer_t) i;
+        communities.e[i].size = 0;
+    }
+
+    // And then for the rest of the nodes
+    IGRAPH_CHECK(igraph_vector_resize(membership, no_of_nodes));
+    igraph_vector_null(membership);
+
+    long int act_free_id = no_of_seed_communities;
+    for (i = 0; i < no_of_nodes; i++) {
+        long int seed_comm_id = VECTOR(*seed_membership)[i];
+        long int act_comm_id = (seed_comm_id == -1) ? act_free_id : seed_comm_id;
+
+        if (seed_comm_id == -1) {
+            // isolated node
+            igraph_vector_ptr_init(&communities.e[act_comm_id].neis, 0);
+            communities.e[act_comm_id].id = (igraph_integer_t) act_comm_id;
+            communities.e[act_comm_id].size = 1;
+
+            act_free_id++;
+        } else {
+            // node from seed community
+            communities.e[act_comm_id].size++;
+        }
+
+        //// Set initial membership for a node!
+        VECTOR(*membership)[i] = communities.e[act_comm_id].id;
+    }
+
+    IGRAPH_DEBUG(do {
+        printf("initial membership: [");
+        for (i = 0; i < igraph_vector_size(membership); i++) {
+            printf("%li", (long int)VECTOR(*membership)[i]);
+            if (i != igraph_vector_size(membership) - 1) {
+                printf(", ");
+            }
+        }
+        printf("]\n");
+    } while(0));
+
+    /* Create a vector */
+    debug("Calculating vector a for seed membership\n");
+    IGRAPH_VECTOR_INIT_FINALLY(&a, no_of_initial_communities);
+    IGRAPH_VECTOR_INIT_FINALLY(&degrees, no_of_nodes);
+    IGRAPH_CHECK(igraph_degree(graph, &degrees, igraph_vss_all(), IGRAPH_ALL, 1));
+
+    for (i = 0; i < no_of_nodes; i++) {
+        VECTOR(a)[(int) VECTOR(*membership)[i]] += VECTOR(degrees)[i];
+    }
+
+    igraph_vector_scale(&a, 1.0 / (2.0 * no_of_edges));
+
+    IGRAPH_DEBUG(do {
+        printf("degrees vector: [");
+        for (i = 0; i < igraph_vector_size(&degrees); i++) {
+            printf("%li", (long int)VECTOR(degrees)[i]);
+            if (i != igraph_vector_size(&degrees) - 1) {
+                printf(", ");
+            }
+        }
+        printf("]\n");
+    } while(0));
+
+    IGRAPH_DEBUG(do {
+        printf("a vector: [");
+        for (i = 0; i < igraph_vector_size(&a); i++) {
+            printf("%f", VECTOR(a)[i]);
+            if (i != igraph_vector_size(&a) - 1) {
+                printf(", ");
+            }
+        }
+        printf("]\n");
+    } while(0));
+
+    //// END MOD
+
+    /* Create list of community pairs from edges */
+    debug("Allocating dq vector\n");
+
+    debug("no_of_initial_communities %li, no_of_nodes %li, no_of_seed_communities %li, no_of_nodes_in_seed_communities %li \n",
+            no_of_initial_communities, no_of_nodes, no_of_seed_communities, no_of_nodes_in_seed_communities);
+
+    dq = (igraph_real_t*)calloc((size_t) no_of_edges, sizeof(igraph_real_t));
+    //// END MOD
+    if (dq == 0) {
+        IGRAPH_ERROR("can't run fast greedy community detection", IGRAPH_ENOMEM);
+    }
+    IGRAPH_FINALLY(free, dq);
+    debug("Creating community pair list\n");
+    IGRAPH_CHECK(igraph_eit_create(graph, igraph_ess_all(0), &edgeit));
+    IGRAPH_FINALLY(igraph_eit_destroy, &edgeit);
+    pairs = (igraph_i_fastgreedy_commpair*)calloc(2 * (size_t) no_of_edges, sizeof(igraph_i_fastgreedy_commpair));
+    if (pairs == 0) {
+        IGRAPH_ERROR("can't run fast greedy community detection", IGRAPH_ENOMEM);
+    }
+    IGRAPH_FINALLY(free, pairs);
+    loop_weight_sum = 0;
+
+    //// MOD
+    // here compute eij for arbitrary size communities...
+    // max initial size should be edges count == max number of pairs
+    // BUT has to be power of 2, hashmap error occur otherwise.
+    long int max_hashmap_size = no_of_edges;
+
+    // https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
+    max_hashmap_size--;
+    max_hashmap_size |= max_hashmap_size >> 1;
+    max_hashmap_size |= max_hashmap_size >> 2;
+    max_hashmap_size |= max_hashmap_size >> 4;
+    max_hashmap_size |= max_hashmap_size >> 8;
+    max_hashmap_size |= max_hashmap_size >> 16;
+    max_hashmap_size++;
+
+    debug("max_hashmap_size %li\n", max_hashmap_size);
+
+    struct hashmap_s eij_map;
+
+    if (0 != hashmap_create(max_hashmap_size, &eij_map)) {
+        IGRAPH_ERROR("fast greedy: hashmap creation error", IGRAPH_ENOMEM);
+    }
+    IGRAPH_FINALLY(hashmap_destroy, &eij_map);
+
+    IGRAPH_CHECK(calculate_initial_eij(&eij_map, graph, membership));
+
+    for (i = 0, j = 0; !IGRAPH_EIT_END(edgeit); IGRAPH_EIT_NEXT(edgeit)) {
+        long int eidx = IGRAPH_EIT_GET(edgeit);
+        igraph_edge(graph, (igraph_integer_t) eidx, &ffrom, &fto);
+        from = (long int)ffrom; to = (long int)fto;
+
+        // check if edge links nodes from the same community
+        long int comm_from = VECTOR(*membership)[from];
+        long int comm_to = VECTOR(*membership)[to];
+
+        if (comm_from != comm_to) {
+            /* Create the pairs themselves */
+
+            /////
+            long int pair_len = get_number_len(comm_from) + get_number_len(comm_to) + 1;
+            char pair_code[pair_len + 1];
+
+            // convention: always comm_from id <= comm_to id
+            if (comm_from > comm_to) {
+                long int tmp = comm_to;
+                comm_to = comm_from;
+                comm_from = tmp;
+            }
+            sprintf(pair_code, "%li,%li", comm_from, comm_to);
+            //////
+
+            debug("access eij: %s (%li)\n", pair_code, pair_len);
+            long int *ij_links_count = hashmap_get(&eij_map, pair_code, pair_len);
+
+            if (ij_links_count == NULL) {
+                // pair already considered
+                debug("PAIR already considered; CONTINUE...\n");
+                continue;
+            }
+
+            debug("eij value: %li\n", *ij_links_count);
+
+            // eq from thesis lemma
+            dq[j] = ((igraph_real_t)(*ij_links_count) / (igraph_real_t)(no_of_edges)) - 2.0 * VECTOR(a)[comm_from] * VECTOR(a)[comm_to];
+            debug("(from: %f, to: %f) dq[j]: %f\n", VECTOR(a)[comm_from], VECTOR(a)[comm_to], dq[j]);
+
+            //// IMPORTANT! remove eij indicating, this pair has been already considered,
+            //// might be the case when few edges occur between initial communities. Free the memory by the way...
+            const char* eij_key = hashmap_get_key(&eij_map, pair_code, pair_len);
+            hashmap_remove(&eij_map, pair_code, pair_len);
+            free(eij_key);
+            free(ij_links_count);
+            /////
+
+            pairs[i].first = comm_from;
+            pairs[i].second = comm_to;
+            pairs[i].dq = &dq[j];
+            pairs[i].opposite = &pairs[i + 1];
+
+            pairs[i + 1].first = comm_to;
+            pairs[i + 1].second = comm_from;
+            pairs[i + 1].dq = pairs[i].dq;
+            pairs[i + 1].opposite = &pairs[i];
+
+            /* Link the pair to the communities */
+            igraph_vector_ptr_push_back(&communities.e[comm_from].neis, &pairs[i]);
+            igraph_vector_ptr_push_back(&communities.e[comm_to].neis, &pairs[i + 1]);
+
+            /* Update maximums */
+            if (communities.e[comm_from].maxdq == 0 || *communities.e[comm_from].maxdq->dq < *pairs[i].dq) {
+                communities.e[comm_from].maxdq = &pairs[i];
+            }
+            if (communities.e[comm_to].maxdq == 0 || *communities.e[comm_to].maxdq->dq < *pairs[i + 1].dq) {
+                communities.e[comm_to].maxdq = &pairs[i + 1];
+            }
+            i += 2;
+            j++;
+        }
+    }
+    //// END MOD
+    igraph_eit_destroy(&edgeit);
+    IGRAPH_FINALLY_CLEAN(1);
+
+    IGRAPH_DEBUG(do {
+        printf("DEBUG PAIRS....\n");
+
+        for (i = 0; i < 2*no_of_edges; i++) {
+            p1 = &pairs[i];
+            if (p1) {
+                printf("%li: p->first %li; p->second: %li\n", i, p1->first, p1->second);
+            }
+        }
+    } while(0));
+
+    /* Sorting community neighbor lists by community IDs */
+    debug("Sorting community neighbor lists\n");
+    for (i = 0, j = 0; i < no_of_initial_communities; i++) {
+        igraph_i_fastgreedy_community_sort_neighbors_of(&communities, i, 0);
+        /* Isolated vertices and vertices with loop edges only won't be stored in
+         * the heap (to avoid maxdq == 0) */
+        if (communities.e[i].maxdq != 0) {
+            communities.heap[j] = &communities.e[i];
+            communities.heapindex[i] = (igraph_integer_t) j;
+            j++;
+        } else {
+            communities.heapindex[i] = -1;
+        }
+    }
+    communities.no_of_communities = j;
+
+    IGRAPH_DEBUG(do {
+        printf("DEBUG COMMUNITIES.... communities.no_of_communities: %li, no_of_initial_communities: %li\n", communities.no_of_communities, no_of_initial_communities);
+
+        for (i = 0; i < no_of_initial_communities; i++) {
+            if (p1) {
+                printf("%li: communities.e[i].id %li; communities.e[i].neis.stor_begin: %li\n", i, communities.e[i].id, communities.e[i].neis.stor_begin);
+            }
+        }
+    } while(0));
+
+    //// MOD
+    /* Calculate initial modularity */
+    q = 0;
+    for (i = 0; i < no_of_initial_communities; i++) {
+        // get eii
+        long int pair_len = get_number_len(i) * 2 + 1;
+        char pair_code[pair_len + 1];
+        sprintf(pair_code, "%li,%li", i, i);
+        debug("access eii: %s (%li)\n", pair_code, pair_len);
+
+        long int *ii_links_count = hashmap_get(&eij_map, pair_code, pair_len);
+        igraph_real_t eii = (ii_links_count == NULL) ? 0 : (igraph_real_t)(*ii_links_count) / (igraph_real_t)no_of_edges;
+
+        debug("eii value: %f, address: %li\n", eii, ii_links_count);
+
+        q += eii - VECTOR(a)[i] * VECTOR(a)[i];
+    }
+    //// END MOD
+    /* Initialize "best modularity" value and best merge counter */
+    bestq = q;
+    best_no_of_joins = 0;
+
+    /* Initializing community heap */
+    debug("Initializing community heap\n");
+    igraph_i_fastgreedy_community_list_build_heap(&communities);
+
+    debug("Initial modularity: %.4f\n", q);
+
+    /* Let's rock ;) */
+    no_of_joins = 0;
+    while (no_of_joins < total_joins) {
+        IGRAPH_ALLOW_INTERRUPTION();
+        IGRAPH_PROGRESS("fast greedy community detection", no_of_joins * 100.0 / total_joins, 0);
+
+        /* Store the modularity */
+        if (modularity) {
+            VECTOR(*modularity)[no_of_joins] = q;
+        }
+
+        /* Update best modularity if needed */
+        if (q >= bestq) {
+            bestq = q;
+            best_no_of_joins = no_of_joins;
+        }
+
+        /* Some debug info if needed */
+        IGRAPH_DEBUG(do {
+            debug("===========================================\n");
+            igraph_i_fastgreedy_community_list_check_heap(&communities);
+            for (i = 0; i < communities.n; i++) {
+                if (communities.e[i].maxdq == 0) {
+                    debug("Community #%ld: PASSIVE\n", i);
+                    continue;
+                }
+                debug("Community #%ld\n ", i);
+                for (j = 0; j < igraph_vector_ptr_size(&communities.e[i].neis); j++) {
+                    p1 = (igraph_i_fastgreedy_commpair*)VECTOR(communities.e[i].neis)[j];
+                    debug(" (%ld,%ld,%.4f)", p1->first, p1->second, *p1->dq);
+                }
+                p1 = communities.e[i].maxdq;
+                debug("\n  Maxdq: (%ld,%ld,%.4f)\n", p1->first, p1->second, *p1->dq);
+            }
+            debug("Global maxdq is: (%ld,%ld,%.4f)\n", communities.heap[0]->maxdq->first,
+                  communities.heap[0]->maxdq->second, *communities.heap[0]->maxdq->dq);
+            for (i = 0; i < communities.no_of_communities; i++) {
+                debug("(%ld,%ld,%.4f) ", communities.heap[i]->maxdq->first, communities.heap[i]->maxdq->second, *communities.heap[i]->maxdq->dq);
+            }
+            debug("\n");
+        } while(0));
+
+        if (communities.heap[0] == 0) {
+            break;    /* no more communities */
+        }
+        if (communities.heap[0]->maxdq == 0) {
+            break;    /* there are only isolated comms */
+        }
+        to = communities.heap[0]->maxdq->second;
+        from = communities.heap[0]->maxdq->first;
+
+        debug("Q[%ld] = %.7f\tdQ = %.7f\t |H| = %ld\n",
+              no_of_joins, q, *communities.heap[0]->maxdq->dq, no_of_initial_communities - no_of_joins - 1);
+
+        /* DEBUG */
+        /* from=join_order[no_of_joins*2]; to=join_order[no_of_joins*2+1];
+        if (to == -1) break;
+        for (i=0; i<igraph_vector_ptr_size(&communities.e[to].neis); i++) {
+          p1=(igraph_i_fastgreedy_commpair*)VECTOR(communities.e[to].neis)[i];
+          if (p1->second == from) communities.maxdq = p1;
+        } */
+
+        n = igraph_vector_ptr_size(&communities.e[to].neis);
+        m = igraph_vector_ptr_size(&communities.e[from].neis);
+        /*if (n>m) {
+          dummy=n; n=m; m=dummy;
+          dummy=to; to=from; from=dummy;
+        }*/
+        debug("  joining: %ld <- %ld\n", to, from);
+        q += *communities.heap[0]->maxdq->dq;
+
+        /* Merge the second community into the first */
+        i = j = 0;
+        while (i < n && j < m) {
+            p1 = (igraph_i_fastgreedy_commpair*)VECTOR(communities.e[to].neis)[i];
+            debug("pi: %li\n", igraph_vector_size(&communities.e[to].neis));
+            p2 = (igraph_i_fastgreedy_commpair*)VECTOR(communities.e[from].neis)[j];
+            debug("Pairs: %ld-%ld and %ld-%ld\n", p1->first, p1->second,
+                  p2->first, p2->second);
+            if (p1->second < p2->second) {
+                /* Considering p1 from now on */
+                debug("    Considering: %ld-%ld\n", p1->first, p1->second);
+                if (p1->second == from) {
+                    debug("    WILL REMOVE: %ld-%ld\n", to, from);
+                } else {
+                    /* chain, case 1 */
+                    debug("    CHAIN(1): %ld-%ld %ld, now=%.7f, adding=%.7f, newdq(%ld,%ld)=%.7f\n",
+                          to, p1->second, from, *p1->dq, -2 * VECTOR(a)[from]*VECTOR(a)[p1->second], p1->first, p1->second, *p1->dq - 2 * VECTOR(a)[from]*VECTOR(a)[p1->second]);
+                    igraph_i_fastgreedy_community_update_dq(&communities, p1, *p1->dq - 2 * VECTOR(a)[from]*VECTOR(a)[p1->second]);
+                }
+                i++;
+            } else if (p1->second == p2->second) {
+                /* p1->first, p1->second and p2->first form a triangle */
+                debug("    Considering: %ld-%ld and %ld-%ld\n", p1->first, p1->second,
+                      p2->first, p2->second);
+                /* Update dq value */
+                debug("    TRIANGLE: %ld-%ld-%ld, now=%.7f, adding=%.7f, newdq(%ld,%ld)=%.7f\n",
+                      to, p1->second, from, *p1->dq, *p2->dq, p1->first, p1->second, *p1->dq + *p2->dq);
+                igraph_i_fastgreedy_community_update_dq(&communities, p1, *p1->dq + *p2->dq);
+                igraph_i_fastgreedy_community_remove_nei(&communities, p1->second, from);
+                i++;
+                j++;
+            } else {
+                debug("    Considering: %ld-%ld\n", p2->first, p2->second);
+                if (p2->second == to) {
+                    debug("    WILL REMOVE: %ld-%ld\n", p2->second, p2->first);
+                } else {
+                    /* chain, case 2 */
+                    debug("    CHAIN(2): %ld %ld-%ld, newdq(%ld,%ld)=%.7f\n",
+                          to, p2->second, from, to, p2->second, *p2->dq - 2 * VECTOR(a)[to]*VECTOR(a)[p2->second]);
+                    p2->opposite->second = to;
+                    /* p2->opposite->second changed, so it means that
+                     * communities.e[p2->second].neis (which contains p2->opposite) is
+                     * not sorted any more. We have to find the index of p2->opposite in
+                     * this vector and move it to the correct place. Moving should be an
+                     * O(n) operation; re-sorting would be O(n*logn) or even worse,
+                     * depending on the pivoting strategy used by qsort() since the
+                     * vector is nearly sorted */
+                    igraph_i_fastgreedy_community_sort_neighbors_of(
+                            &communities, p2->second, p2->opposite);
+                    /* link from.neis[j] to the current place in to.neis if
+                     * from.neis[j] != to */
+                    p2->first = to;
+                    IGRAPH_CHECK(igraph_vector_ptr_insert(&communities.e[to].neis, i, p2));
+                    n++; i++;
+                    if (*p2->dq > *communities.e[to].maxdq->dq) {
+                        communities.e[to].maxdq = p2;
+                        k = igraph_i_fastgreedy_community_list_find_in_heap(&communities, to);
+                        igraph_i_fastgreedy_community_list_sift_up(&communities, k);
+                    }
+                    igraph_i_fastgreedy_community_update_dq(&communities, p2, *p2->dq - 2 * VECTOR(a)[to]*VECTOR(a)[p2->second]);
+                }
+                j++;
+            }
+        }
+
+        while (i < n) {
+            p1 = (igraph_i_fastgreedy_commpair*)VECTOR(communities.e[to].neis)[i];
+            if (p1->second == from) {
+                debug("    WILL REMOVE: %ld-%ld\n", p1->first, from);
+            } else {
+                /* chain, case 1 */
+                debug("    CHAIN(1): %ld-%ld %ld, now=%.7f, adding=%.7f, newdq(%ld,%ld)=%.7f\n",
+                      to, p1->second, from, *p1->dq, -2 * VECTOR(a)[from]*VECTOR(a)[p1->second], p1->first, p1->second, *p1->dq - 2 * VECTOR(a)[from]*VECTOR(a)[p1->second]);
+                igraph_i_fastgreedy_community_update_dq(&communities, p1, *p1->dq - 2 * VECTOR(a)[from]*VECTOR(a)[p1->second]);
+            }
+            i++;
+        }
+        while (j < m) {
+            p2 = (igraph_i_fastgreedy_commpair*)VECTOR(communities.e[from].neis)[j];
+            if (to == p2->second) {
+                j++;
+                continue;
+            }
+            /* chain, case 2 */
+            debug("%li\n", p2->second);
+            debug("    CHAIN(2): %ld %ld-%ld, newdq(%ld,%ld)=%.7f\n",
+                  to, p2->second, from, p1->first, p2->second, *p2->dq - 2 * VECTOR(a)[to]*VECTOR(a)[p2->second]);
+            p2->opposite->second = to;
+            /* need to re-sort community nei list `p2->second` */
+            igraph_i_fastgreedy_community_sort_neighbors_of(&communities, p2->second, p2->opposite);
+            /* link from.neis[j] to the current place in to.neis if
+             * from.neis[j] != to */
+            p2->first = to;
+            IGRAPH_CHECK(igraph_vector_ptr_push_back(&communities.e[to].neis, p2));
+            if (*p2->dq > *communities.e[to].maxdq->dq) {
+                communities.e[to].maxdq = p2;
+                k = igraph_i_fastgreedy_community_list_find_in_heap(&communities, to);
+                igraph_i_fastgreedy_community_list_sift_up(&communities, k);
+            }
+            igraph_i_fastgreedy_community_update_dq(&communities, p2, *p2->dq - 2 * VECTOR(a)[to]*VECTOR(a)[p2->second]);
+            j++;
+        }
+
+        /* Now, remove community `from` from the neighbors of community `to` */
+        if (communities.no_of_communities > 2) {
+            debug("    REMOVING: %ld-%ld\n", to, from);
+            igraph_i_fastgreedy_community_remove_nei(&communities, to, from);
+            i = igraph_i_fastgreedy_community_list_find_in_heap(&communities, from);
+            igraph_i_fastgreedy_community_list_remove(&communities, i);
+        }
+        communities.e[from].maxdq = 0;
+
+        /* Update community sizes */
+        communities.e[to].size += communities.e[from].size;
+        communities.e[from].size = 0;
+
+        /* record what has been merged */
+        /* igraph_vector_ptr_clear is not enough here as it won't free
+         * the memory consumed by communities.e[from].neis. Thanks
+         * to Tom Gregorovic for pointing that out. */
+        igraph_vector_ptr_destroy(&communities.e[from].neis);
+        if (merges) {
+            MATRIX(*merges, no_of_joins, 0) = to;
+            MATRIX(*merges, no_of_joins, 1) = from;
+            // FIXME --> before was:
+//            MATRIX(*merges, no_of_joins, 0) = communities.e[to].id;
+//            MATRIX(*merges, no_of_joins, 1) = communities.e[from].id;
+            communities.e[to].id = (igraph_integer_t) (no_of_nodes + no_of_joins);
+        }
+
+        /* Update vector a */
+        VECTOR(a)[to] += VECTOR(a)[from];
+        VECTOR(a)[from] = 0.0;
+
+        no_of_joins++;
+    }
+    /* TODO: continue merging when some isolated communities remained. Always
+     * joining the communities with the least number of nodes results in the
+     * smallest decrease in modularity every step. Now we're simply deleting
+     * the excess rows from the merge matrix */
+    if (no_of_joins < total_joins) {
+        long int *ivec;
+        ivec = igraph_Calloc(igraph_matrix_nrow(merges), long int);
+        if (ivec == 0) {
+            IGRAPH_ERROR("can't run fast greedy community detection", IGRAPH_ENOMEM);
+        }
+        IGRAPH_FINALLY(free, ivec);
+        for (i = 0; i < no_of_joins; i++) {
+            ivec[i] = i + 1;
+        }
+        igraph_matrix_permdelete_rows(merges, ivec, total_joins - no_of_joins);
+        free(ivec);
+        IGRAPH_FINALLY_CLEAN(1);
+    }
+    IGRAPH_PROGRESS("fast greedy community detection", 100.0, 0);
+
+    if (modularity) {
+        VECTOR(*modularity)[no_of_joins] = q;
+        igraph_vector_resize(modularity, no_of_joins + 1);
+    }
+
+    debug("Freeing memory\n");
+    free(pairs);
+    free(dq);
+    igraph_i_fastgreedy_community_list_destroy(&communities);
+    igraph_vector_destroy(&a);
+    // TODO check finally clean stuff is working properly here...
+    igraph_vector_destroy(&degrees);
+    hashmap_destroy(&eij_map);
+    IGRAPH_FINALLY_CLEAN(6);
+
+    if (membership) {
+        IGRAPH_CHECK(igraph_community_to_membership_with_initial_membership(merges,
+                                                    (igraph_integer_t) no_of_nodes,
+                /*steps=*/ (igraph_integer_t) best_no_of_joins,
+                                                    membership));
+    }
+
+    if (merges == &merges_local) {
+        igraph_matrix_destroy(&merges_local);
+        IGRAPH_FINALLY_CLEAN(1);
+    }
+
     return 0;
 }
+
+
+
+
+
+// TOOO might be useful
+//int igraph_reindex_membership(igraph_vector_t *membership,
+//                              igraph_vector_t *new_to_old,
+//                              igraph_integer_t *nb_clusters) {
+//
+//    long int i, n = igraph_vector_size(membership);
+//    igraph_vector_t new_cluster;
+//    igraph_integer_t i_nb_clusters;
+//
+//    /* We allow original cluster indices in the range 0, ..., n - 1 */
+//    IGRAPH_CHECK(igraph_vector_init(&new_cluster, n));
+//    IGRAPH_FINALLY(igraph_vector_destroy, &new_cluster);
+//
+//    if (new_to_old) {
+//        igraph_vector_clear(new_to_old);
+//    }
+//
+//    /* Clean clusters. We will store the new cluster + 1 so that membership == 0
+//     * indicates that no cluster was assigned yet. */
+//    i_nb_clusters = 1;
+//    for (i = 0; i < n; i++) {
+//        long int c = (long int)VECTOR(*membership)[i];
+//
+//        if (c >= n) {
+//            IGRAPH_ERROR("Cluster out of range", IGRAPH_EINVAL);
+//        }
+//
+//        if (VECTOR(new_cluster)[c] == 0) {
+//            VECTOR(new_cluster)[c] = (igraph_real_t)i_nb_clusters;
+//            i_nb_clusters += 1;
+//            if (new_to_old) {
+//                IGRAPH_CHECK(igraph_vector_push_back(new_to_old, c));
+//            }
+//        }
+//    }
+//
+//    /* Assign new membership */
+//    for (i = 0; i < n; i++) {
+//        long int c = (long int)VECTOR(*membership)[i];
+//        VECTOR(*membership)[i] = VECTOR(new_cluster)[c] - 1;
+//    }
+//    if (nb_clusters) {
+//        /* We used the cluster + 1, so correct */
+//        *nb_clusters = i_nb_clusters - 1;
+//    }
+//
+//    igraph_vector_destroy(&new_cluster);
+//
+//    IGRAPH_FINALLY_CLEAN(1);
+//
+//    return IGRAPH_SUCCESS;
+//}

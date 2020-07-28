@@ -1,2 +1,4 @@
 .idea
 node_modules
+/igraph/examples/communities/fastgreedy_seed_test
+/igraph/examples/communities/out

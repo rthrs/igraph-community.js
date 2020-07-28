@@ -3,7 +3,7 @@ const ALGORITHM_NAMES = [
     'fastGreedy',
     'infomap',
     'labelPropagation',
-    'leadingEigenvector',
+    // 'leadingEigenvector', // FIXME Error at igraph/src/arpack.c:1001 :ARPACK error, MODE is invalid
     'louvain',
     'optimal',
     'spinglass',

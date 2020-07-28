@@ -32,7 +32,7 @@ for i in "$@"; do
     shift
     ;;
     *)
-    # unknown option
+    echo "Unknown option: $i"
     ;;
   esac
 done
@@ -74,5 +74,6 @@ emcc \
   $SRC_MAIN \
   $SRC_FILES \
   -o $OUT_DIR/$MAIN_OUT \
+  -s ASSERTIONS=1 \
   --no-entry
 #  -s ENVIRONMENT="web"

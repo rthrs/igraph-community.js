@@ -150,8 +150,8 @@ int runCommunityDetection(
             igraph_community_label_propagation(&g, &membership, 0, /*initial*/ 0, /*fixed*/ 0, &max_modularity);
             break;
         case LEADING_EIGENVECTOR:
-            // Consider steps as parameter
-            igraph_community_leading_eigenvector(&g, /*weights*/ 0, /*merges*/ 0, &membership, /*steps*/ 0,
+            // Consider steps as parameter; when steps == -1 then automatically should be set to number of vertices
+            igraph_community_leading_eigenvector(&g, /*weights*/ 0, /*merges*/ 0, &membership, /*steps*/ -1,
                                                  /*options*/ 0, &max_modularity, /*start*/ 0, /*eigenvalues*/ 0,
                                                  /*eigenvectors*/ 0, /*history*/ 0, /*callback*/ 0,
                                                  /*callback_extra*/ 0);

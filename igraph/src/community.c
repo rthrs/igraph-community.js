@@ -74,7 +74,8 @@ int igraph_i_rewrite_membership_vector(igraph_vector_t *membership) {
     return 0;
 }
 
-int igraph_i_community_eb_get_merges2(const igraph_t *graph,
+//// MOD
+int igraph_i_community_eb_get_merges_seed(const igraph_t *graph,
                                       const igraph_vector_t *edges,
                                       const igraph_vector_t *weights,
                                       igraph_matrix_t *res,
@@ -207,7 +208,7 @@ int igraph_i_community_eb_get_merges2(const igraph_t *graph,
 
     return 0;
 }
-
+//// END MOD
 
 /**
  * \function igraph_community_eb_get_merges
@@ -275,7 +276,7 @@ int igraph_community_eb_get_merges(const igraph_t *graph,
     igraph_integer_t no_comps;
 
     if (membership || modularity) {
-        return igraph_i_community_eb_get_merges2(graph, edges, weights, res,
+        return igraph_i_community_eb_get_merges_seed(graph, edges, weights, res,
                 bridges, modularity,
                 membership, seed_membership);
     }
@@ -812,7 +813,7 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
     if (result == 0) {
         result = igraph_Calloc(1, igraph_vector_t);
         if (result == 0) {
-            IGRAPH_ERROR("edge betweenness mod 2 community structure failed", IGRAPH_ENOMEM);
+            IGRAPH_ERROR("edge betweenness seed community structure failed", IGRAPH_ENOMEM);
         }
         IGRAPH_FINALLY(igraph_free, result);
         IGRAPH_VECTOR_INIT_FINALLY(result, 0);
@@ -835,17 +836,17 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
 
     distance = igraph_Calloc(no_of_nodes, double);
     if (distance == 0) {
-        IGRAPH_ERROR("edge betweenness mod 2 community structure failed", IGRAPH_ENOMEM);
+        IGRAPH_ERROR("edge betweenness seed community structure failed", IGRAPH_ENOMEM);
     }
     IGRAPH_FINALLY(igraph_free, distance);
     nrgeo = igraph_Calloc(no_of_nodes, unsigned long long int);
     if (nrgeo == 0) {
-        IGRAPH_ERROR("edge betweenness mod 2 community structure failed", IGRAPH_ENOMEM);
+        IGRAPH_ERROR("edge betweenness seed community structure failed", IGRAPH_ENOMEM);
     }
     IGRAPH_FINALLY(igraph_free, nrgeo);
     tmpscore = igraph_Calloc(no_of_nodes, double);
     if (tmpscore == 0) {
-        IGRAPH_ERROR("edge betweenness mod 2 community structure failed", IGRAPH_ENOMEM);
+        IGRAPH_ERROR("edge betweenness seed community structure failed", IGRAPH_ENOMEM);
     }
     IGRAPH_FINALLY(igraph_free, tmpscore);
 
@@ -862,7 +863,7 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
         }
 
         if (modularity != 0 || membership != 0) {
-            IGRAPH_WARNING("Modularity calculation with weighted edge betweenness mod 2 "\
+            IGRAPH_WARNING("Modularity calculation with weighted edge betweenness seed "\
                            "community detection might not make sense -- modularity treats edge "\
                            "weights as similarities while edge betwenness treats them as "\
                            "distances");
@@ -889,7 +890,7 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
 
     passive = igraph_Calloc(no_of_edges, char);
     if (!passive) {
-        IGRAPH_ERROR("edge betweenness mod 2 community structure failed", IGRAPH_ENOMEM);
+        IGRAPH_ERROR("edge betweenness seed community structure failed", IGRAPH_ENOMEM);
     }
     IGRAPH_FINALLY(igraph_free, passive);
 
@@ -959,7 +960,7 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
     //// MOD END
 
     for (e = 0; e < mod_no_of_edges; steps_done += mod_no_of_edges - e, e++) {
-        IGRAPH_PROGRESS("Edge betweenness mod 2 community detection: ",
+        IGRAPH_PROGRESS("Edge betweenness seed community detection: ",
                         100.0 * steps_done / steps, NULL);
 
         igraph_vector_null(&eb);
@@ -1138,7 +1139,7 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
         igraph_vector_int_pop_back(neip);
     }
 
-    IGRAPH_PROGRESS("Edge betweenness mod 2 community detection: ", 100.0, NULL);
+    IGRAPH_PROGRESS("Edge betweenness seed community detection: ", 100.0, NULL);
 
     igraph_free(passive);
     igraph_vector_destroy(&eb);
@@ -1320,6 +1321,7 @@ int igraph_community_to_membership(const igraph_matrix_t *merges,
 
     return 0;
 }
+
 
 /**
  * \function igraph_modularity
@@ -3792,7 +3794,7 @@ int igraph_i_split_join_distance(const igraph_vector_t *v1,
  * \function igraph_community_multilevel_seed
  * \brief Louvain Seed
  */
-DECLDIR int igraph_community_multilevel_seed(const igraph_t *graph,
+int igraph_community_multilevel_seed(const igraph_t *graph,
                                              const igraph_vector_t *weights,
                                              igraph_vector_t *membership,
                                              igraph_matrix_t *memberships,
@@ -3802,6 +3804,8 @@ DECLDIR int igraph_community_multilevel_seed(const igraph_t *graph,
     return 0;
 }
 
+//// MULTILEVEL MODS END
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 /**

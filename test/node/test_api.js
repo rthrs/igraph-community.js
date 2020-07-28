@@ -18,6 +18,9 @@ getAPI({ wasm: true }).then((api) => {
     seedMembership[33] = seedMembership[31] = 0;
     seedMembership[0] = seedMembership[4] = 1;
 
+    // FIXME - modularity 29.0 for EB seeds
+    // seedMembership = [-1, -1, 0, -1, -1, -1, -1, -1, 0, 0, -1, -1, -1, -1, 0, 0, -1, -1, 0, -1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
     SEED_ALGORITHM_NAMES.forEach((name) => {
         printAlgorithmName(name);
         const { modularity, membership } = runCommunityDetection(name, n, edges, { seedMembership });
