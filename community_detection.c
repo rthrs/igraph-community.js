@@ -86,8 +86,12 @@ void show_results(igraph_t *g, igraph_vector_t *mod, igraph_matrix_t *merges,
 }
 
 igraph_real_t* membership_result;
-igraph_real_t* modularity_result;
-size_t modularity_size;
+
+igraph_real_t* modularities_found_result;
+size_t modularities_found_size;
+
+igraph_real_t membership_modularity_result;
+
 
 int progress_handler(const char *message, igraph_real_t percent, void *data) {
     while(*message!='\0') {
@@ -196,18 +200,21 @@ int runCommunityDetection(
 
     if (max_modularity != -2) {
         igraph_vector_push_back(&modularity, max_modularity);
+    } else {
+        max_modularity = VECTOR(modularity)[igraph_vector_which_max(&modularity)];
     }
 
+    membership_modularity_result = max_modularity;
 
     IGRAPH_DEBUG(show_results(&g, &modularity, 0, &membership, seed_membership != 0 ? &seed_membership_v : 0, stdout));
 
     // Copy result to C arrays
     membership_result = createBuffer(igraph_vector_size(&membership));
-    modularity_size = igraph_vector_size(&modularity);
-    modularity_result = createBuffer(modularity_size);
+    modularities_found_size = igraph_vector_size(&modularity);
+    modularities_found_result = createBuffer(modularities_found_size);
 
     igraph_vector_copy_to(&membership, membership_result);
-    igraph_vector_copy_to(&modularity, modularity_result);
+    igraph_vector_copy_to(&modularity, modularities_found_result);
 
     // Destroy result structures
     igraph_vector_destroy(&membership);
@@ -295,17 +302,22 @@ igraph_real_t* getMembershipPointer() {
 }
 
 EMSCRIPTEN_KEEPALIVE
-double* getModularityPointer() {
-    return modularity_result;
+double* getModularitiesFoundPointer() {
+    return modularities_found_result;
 }
 
 EMSCRIPTEN_KEEPALIVE
-size_t getModularitySize() {
-    return modularity_size;
+size_t getModularitiesFoundSize() {
+    return modularities_found_size;
+}
+
+EMSCRIPTEN_KEEPALIVE
+igraph_real_t getMembershipModularity() {
+    return membership_modularity_result;
 }
 
 EMSCRIPTEN_KEEPALIVE
 void freeResult() {
     destroyBuffer(membership_result);
-    destroyBuffer(modularity_result);
+    destroyBuffer(modularities_found_result);
 }

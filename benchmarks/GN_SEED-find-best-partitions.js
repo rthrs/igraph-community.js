@@ -43,8 +43,15 @@ function runBenchmark(runGNSeedonGraph, graph) {
     console.log('***********************************');
     console.log(res1);
 
-    // console.log('BENCHMARK ON JOHN A SEEDS POWERSET:');
-    // runGNonSeeds(EMPTY_COMMUNITIES, johnPowerSet);
+    console.log('BENCHMARK ON JOHN A SEEDS POWERSET:');
+    const res2 = runGNonSeeds(EMPTY_COMMUNITIES, johnPowerSet, runGNSeedonGraph, graph);
+    console.log('***********************************');
+    console.log(res2);
+
+    // console.log('BENCHMARK ON BOTH SEEDS POWERSETS:');
+    // const res3 = runGNonSeeds(mrHiPowerSet, johnPowerSet, runGNSeedonGraph, graph);
+    // console.log('***********************************');
+    // console.log(res3);
 }
 
 function runGNonSeeds(mrHiComms, johnComms, runGNSeed, graph) {
@@ -74,7 +81,7 @@ function runGNonSeeds(mrHiComms, johnComms, runGNSeed, graph) {
             // console.log(mrHiSeed, johnSeed);
             const { modularity, membership } = runGNSeed(seedMembership);
             // console.log({ modularity, membership })
-            const q = R.reduce(R.max, -Infinity, modularity);
+            const q = modularity;
             if (q > bestModularity) {
                 bestMembership = membership;
                 bestSeeds = {

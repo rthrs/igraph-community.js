@@ -16,6 +16,11 @@ const SEED_ALGORITHM_NAMES = [
     'edgeBetweennessSeed'
 ];
 
+const ALL_ALGORITHM_NAMES = [
+    ...ALGORITHM_NAMES,
+    ...SEED_ALGORITHM_NAMES
+];
+
 let publicAPI = null;
 
 const getAPI = ({ wasm = true, onLoad = () => {} } = {}) =>
@@ -62,14 +67,19 @@ function loadPublicAPI(onLoaded, wasm) {
             destroyBuffer: Module.cwrap('destroyBuffer', '', ['number']),
 
             getMembershipPointer: Module.cwrap('getMembershipPointer', 'number', []),
-            getModularityPointer: Module.cwrap('getModularityPointer', 'number', []),
-            getModularitySize: Module.cwrap('getModularitySize', 'number', []),
+            getMembershipModularity: Module.cwrap('getMembershipModularity', 'number', []),
+            getModularitiesFoundPointer: Module.cwrap('getModularitiesFoundPointer', 'number', []),
+            getModularitiesFoundSize: Module.cwrap('getModularitiesFoundSize', 'number', []),
 
             freeResult: Module.cwrap('freeResult', '', []),
         };
 
         // @edges: undirected edges list, the first two elements are the first edge, etc.
         function runCommunityDetection(algorithmName, n, edges, options = {}) {
+            if (!ALL_ALGORITHM_NAMES.includes(algorithmName)) {
+                throw new Error(`Uknown algorithm name: '${algorithmName}'. Possible options are:  ${ALL_ALGORITHM_NAMES}`);
+            }
+
             const { seedMembership = null } = options;
 
             const edgesPointer = api.createBuffer(edges.length);
@@ -88,7 +98,8 @@ function loadPublicAPI(onLoaded, wasm) {
             api[algorithmName](...args);
 
             const membership = getResultData(api.getMembershipPointer(), n);
-            const modularity = getResultData(api.getModularityPointer(), api.getModularitySize());
+            const modularity = api.getMembershipModularity();
+            const modularitiesFound = getResultData(api.getModularitiesFoundPointer(), api.getModularitiesFoundSize());
 
             api.freeResult();
             api.destroyBuffer(edgesPointer);
@@ -97,8 +108,9 @@ function loadPublicAPI(onLoaded, wasm) {
             }
 
             return {
+                membership,
                 modularity,
-                membership
+                modularitiesFound
             }
         }
 
@@ -118,5 +130,6 @@ function loadPublicAPI(onLoaded, wasm) {
 module.exports = {
     getAPI,
     ALGORITHM_NAMES,
-    SEED_ALGORITHM_NAMES
+    SEED_ALGORITHM_NAMES,
+    ALL_ALGORITHM_NAMES
 };
