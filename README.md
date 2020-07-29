@@ -86,6 +86,7 @@ type AlgorithmNameType =
     | 'labelPropagation'
     | 'leadingEigenvector'
     | 'louvain'
+    | 'leiden'
     | 'optimal'
     | 'spinglass'
     | 'walktrap';

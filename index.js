@@ -3,8 +3,9 @@ const ALGORITHM_NAMES = [
     'fastGreedy',
     'infomap',
     'labelPropagation',
-    // 'leadingEigenvector', // FIXME Error at igraph/src/arpack.c:1001 :ARPACK error, MODE is invalid
+    'leadingEigenvector', // FIXME Error at igraph/src/arpack.c:1001 :ARPACK error, MODE is invalid
     'louvain',
+    'leiden',
     'optimal',
     'spinglass',
     'walktrap'
@@ -37,9 +38,6 @@ const getAPI = ({ wasm = true, onLoad = () => {} } = {}) =>
         }
     }));
 
-// const ModuleASM = require('./dist/asm/community-detection.js');
-// const ModuleWASM = require('./dist/wasm/community_detection.out.js');
-console.log(__dirname);
 function loadPublicAPI(onLoaded, wasm) {
     const Module = wasm ? require('./dist/wasm/community-detection.js') : require('./dist/asm/community-detection.js');
 
@@ -52,6 +50,7 @@ function loadPublicAPI(onLoaded, wasm) {
             labelPropagation: Module.cwrap('labelPropagation', 'number', ['number', 'number', 'number']),
             leadingEigenvector: Module.cwrap('leadingEigenvector', 'number', ['number', 'number', 'number']),
             louvain: Module.cwrap('louvain', 'number', ['number', 'number', 'number']),
+            leiden: Module.cwrap('leiden', 'number', ['number', 'number', 'number']),
             optimal: Module.cwrap('optimal', 'number', ['number', 'number', 'number']),
             spinglass: Module.cwrap('spinglass', 'number', ['number', 'number', 'number']),
             walktrap: Module.cwrap('walktrap', 'number', ['number', 'number', 'number']),

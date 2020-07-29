@@ -12,6 +12,7 @@ enum algorithm_name{
     LABEL_PROPAGATION,
     LEADING_EIGENVECTOR,
     LOUVAIN,
+    LEIDEN,
     OPTIMAL,
     SPINGLASS,
     WALKTRAP,
@@ -108,11 +109,11 @@ int runCommunityDetection(
     const igraph_real_t *seed_membership
 ) {
     // TODO set external progress handler from JS
-//     igraph_set_progress_handler(progress_handler);
+    // igraph_set_progress_handler(progress_handler);
 
     // Init graph from edges
     igraph_t g;
-    igraph_vector_t edges_v;
+    igraph_vector_t edges_v, degree;
     igraph_vector_view(&edges_v, edges, edges_len);
 
     igraph_create(&g, &edges_v, n, IGRAPH_UNDIRECTED);
@@ -129,14 +130,17 @@ int runCommunityDetection(
     igraph_vector_init(&modularity, 0);
     igraph_vector_init(&membership, 0);
 
-    // Merges required when passing membership to walktrap algorithm
-    igraph_matrix_t merges;
-    igraph_matrix_init(&merges, 0, 0);
+    // Init max modularity
+    igraph_real_t max_modularity = -2; // -2 due to modularity is in range of [-1, 1]
 
     // Algorithm specific variables
-    int infomap_nb_trials = 5;
-    igraph_real_t codelength;
-    igraph_real_t max_modularity = -2; // -2 due to modularity is in range of [-1, 1]
+    igraph_real_t codelength; // for infomap
+
+    igraph_integer_t nb_clusters; // for leiden
+
+    igraph_arpack_options_t options; // for leading_eigenvector
+
+    igraph_matrix_t merges; // for walktrap
 
     // Run algorithm
     switch(algorithm) {
@@ -147,21 +151,34 @@ int runCommunityDetection(
             igraph_community_fastgreedy(&g, 0, 0, &modularity, &membership);
             break;
         case INFOMAP:
-            igraph_community_infomap(&g, 0, 0, infomap_nb_trials, &membership, &codelength);
+            // Consider nb_trials as parameter
+            igraph_community_infomap(&g, 0, 0, /*nb_trials*/ 5, &membership, &codelength);
             igraph_modularity(&g, &membership, &max_modularity, 0);
             break;
         case LABEL_PROPAGATION:
             igraph_community_label_propagation(&g, &membership, 0, /*initial*/ 0, /*fixed*/ 0, &max_modularity);
             break;
         case LEADING_EIGENVECTOR:
+            igraph_arpack_options_init(&options);
+
             // Consider steps as parameter; when steps == -1 then automatically should be set to number of vertices
             igraph_community_leading_eigenvector(&g, /*weights*/ 0, /*merges*/ 0, &membership, /*steps*/ -1,
-                                                 /*options*/ 0, &max_modularity, /*start*/ 0, /*eigenvalues*/ 0,
+                                                 /*options*/ &options, &max_modularity, /*start*/ 0, /*eigenvalues*/ 0,
                                                  /*eigenvectors*/ 0, /*history*/ 0, /*callback*/ 0,
                                                  /*callback_extra*/ 0);
             break;
         case LOUVAIN:
             igraph_community_multilevel(&g, 0, &membership, 0, &modularity);
+            break;
+        case LEIDEN:
+            igraph_vector_init(&degree, igraph_vcount(&g));
+            igraph_degree(&g, &degree, igraph_vss_all(), IGRAPH_ALL, 1);
+
+            // Consider parameters to add, this one is modularity based approach
+            igraph_community_leiden(&g, NULL, &degree, 1.0 / (2 * igraph_ecount(&g)), 0.01, 0,
+                                    &membership, &nb_clusters, &max_modularity);
+
+            igraph_vector_destroy(&degree);
             break;
         case OPTIMAL:
             igraph_community_optimal_modularity(&g, &max_modularity, &membership, /*weights*/ 0);
@@ -175,8 +192,12 @@ int runCommunityDetection(
                                        IGRAPH_SPINCOMM_IMP_ORIG, /*gamma-=*/ 0);
             break;
         case WALKTRAP:
+            igraph_matrix_init(&merges, 0, 0);
+
             // Consider steps as parameter
             igraph_community_walktrap(&g, /*wights*/ 0, /*steps*/ 4, &merges, &modularity, &membership);
+
+            igraph_matrix_destroy(&merges);
             break;
 
 
@@ -257,6 +278,11 @@ int leadingEigenvector(igraph_integer_t n, const igraph_real_t *edges, size_t ed
 EMSCRIPTEN_KEEPALIVE
 int louvain(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len) {
     return runCommunityDetection(LOUVAIN, n, edges, edges_len, 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int leiden(igraph_integer_t n, const igraph_real_t *edges, size_t edges_len) {
+    return runCommunityDetection(LEIDEN, n, edges, edges_len, 0);
 }
 
 EMSCRIPTEN_KEEPALIVE
