@@ -1074,36 +1074,81 @@ int igraph_community_fastgreedy(const igraph_t *graph,
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// FAST GREEDY MODS
 int igraph_community_to_membership_with_initial_membership(const igraph_matrix_t *merges,
-                                                           igraph_integer_t nodes,
+                                                           igraph_integer_t no_of_nodes,
+                                                           igraph_integer_t no_of_initial_communities,
                                                            igraph_integer_t steps,
-                                                           igraph_vector_t *membership
-) {
-
-    long int no_of_nodes = nodes;
-    long int components = no_of_nodes - steps;
-    long int i, found = 0;
-    igraph_vector_t tmp;
+                                                           igraph_vector_t *membership) {
+    long int i = 0;
 
     if (steps > igraph_matrix_nrow(merges)) {
         IGRAPH_ERROR("`steps' to big or `merges' matrix too short", IGRAPH_EINVAL);
     }
 
-    // TODO try to do this in linear time...
-    debug("DO MERGE...\n");
+    debug("DO MERGE... %li %li\n", no_of_nodes, no_of_initial_communities);
+    igraph_vector_t changes, backtrack, visited;
+
+    IGRAPH_VECTOR_INIT_FINALLY(&changes, no_of_initial_communities);
+    IGRAPH_VECTOR_INIT_FINALLY(&backtrack, no_of_nodes);
+    IGRAPH_VECTOR_INIT_FINALLY(&visited, no_of_nodes);
+
+    igraph_vector_fill(&changes, -1);
+    igraph_vector_fill(&backtrack, -1);
+    igraph_vector_fill(&visited, 0);
+
     for (i = 0; i < steps; i++) {
         long int c1 = (long int) MATRIX(*merges, i, 0);
         long int c2 = (long int) MATRIX(*merges, i, 1);
-        // merge c2 into c1
-        debug("merge %li, %li\n", c1, c2);
-        for (long int j = 0; j < no_of_nodes; j++) {
-            long int act = VECTOR(*membership)[j];
-            if (act == c2) {
-                VECTOR(*membership)[j] = c1;
+        VECTOR(changes)[c2] = c1;
+    }
+
+    IGRAPH_DEBUG(do {
+        for (i = 0; i < no_of_initial_communities; i++) {
+            debug("changes[%li]:%li\n", i, VECTOR(changes)[i]);
+            debug("backtrack[%li]:%li\n", i, VECTOR(backtrack)[i]);
+            debug("visited[%li]:%li\n", i, VECTOR(visited)[i]);
+        }
+    } while(0));
+
+    // we have possibly cyclic list, let's expand to final form
+    for (i = 0; i < no_of_initial_communities; i++) {
+        long int act = VECTOR(changes)[i];
+
+        if (act != -1 && !VECTOR(visited)[i]) {
+            long int j = act;
+            while (j != -1 && !VECTOR(visited)[j]) {
+                long int next = VECTOR(changes)[j];
+                debug("j: %li, next: %li\n", j, next);
+                if (next != -1) {
+                    VECTOR(backtrack)[next] = j;
+                }
+                j = next;
+
+            }
+            long int final_id = j;
+            while (j != act) {
+                long int prev = VECTOR(backtrack)[j];
+//                debug("prev: %li\n", prev);
+                VECTOR(changes)[prev] = final_id;
+                VECTOR(visited)[prev] = 1;
+                j = prev;
             }
         }
     }
 
+    for (i = 0; i < no_of_nodes; i++) {
+        long int comm_id = VECTOR(*membership)[i];
+        long int final_comm_id = VECTOR(changes)[comm_id];
+        if (final_comm_id != -1) {
+            VECTOR(*membership)[i] = final_comm_id;
+        }
+    }
+
     IGRAPH_CHECK(igraph_reindex_membership(membership, 0, NULL));
+
+    igraph_vector_destroy(&changes);
+    igraph_vector_destroy(&backtrack);
+    igraph_vector_destroy(&visited);
+    IGRAPH_FINALLY_CLEAN(3);
 
     return 0;
 }
@@ -1801,7 +1846,7 @@ int igraph_community_fastgreedy_seed(const igraph_t *graph,
     free(dq);
     igraph_i_fastgreedy_community_list_destroy(&communities);
     igraph_vector_destroy(&a);
-    // TODO check finally clean stuff is working properly here...
+
     igraph_vector_destroy(&degrees);
     hashmap_destroy(&eij_map);
     IGRAPH_FINALLY_CLEAN(6);
@@ -1809,7 +1854,8 @@ int igraph_community_fastgreedy_seed(const igraph_t *graph,
     if (membership) {
         IGRAPH_CHECK(igraph_community_to_membership_with_initial_membership(merges,
                                                     (igraph_integer_t) no_of_nodes,
-                /*steps=*/ (igraph_integer_t) best_no_of_joins,
+                                                    (igraph_integer_t) no_of_initial_communities,
+                                                    (igraph_integer_t) best_no_of_joins,
                                                     membership));
     }
 
@@ -1820,60 +1866,3 @@ int igraph_community_fastgreedy_seed(const igraph_t *graph,
 
     return 0;
 }
-
-
-
-
-
-// TOOO might be useful
-//int igraph_reindex_membership(igraph_vector_t *membership,
-//                              igraph_vector_t *new_to_old,
-//                              igraph_integer_t *nb_clusters) {
-//
-//    long int i, n = igraph_vector_size(membership);
-//    igraph_vector_t new_cluster;
-//    igraph_integer_t i_nb_clusters;
-//
-//    /* We allow original cluster indices in the range 0, ..., n - 1 */
-//    IGRAPH_CHECK(igraph_vector_init(&new_cluster, n));
-//    IGRAPH_FINALLY(igraph_vector_destroy, &new_cluster);
-//
-//    if (new_to_old) {
-//        igraph_vector_clear(new_to_old);
-//    }
-//
-//    /* Clean clusters. We will store the new cluster + 1 so that membership == 0
-//     * indicates that no cluster was assigned yet. */
-//    i_nb_clusters = 1;
-//    for (i = 0; i < n; i++) {
-//        long int c = (long int)VECTOR(*membership)[i];
-//
-//        if (c >= n) {
-//            IGRAPH_ERROR("Cluster out of range", IGRAPH_EINVAL);
-//        }
-//
-//        if (VECTOR(new_cluster)[c] == 0) {
-//            VECTOR(new_cluster)[c] = (igraph_real_t)i_nb_clusters;
-//            i_nb_clusters += 1;
-//            if (new_to_old) {
-//                IGRAPH_CHECK(igraph_vector_push_back(new_to_old, c));
-//            }
-//        }
-//    }
-//
-//    /* Assign new membership */
-//    for (i = 0; i < n; i++) {
-//        long int c = (long int)VECTOR(*membership)[i];
-//        VECTOR(*membership)[i] = VECTOR(new_cluster)[c] - 1;
-//    }
-//    if (nb_clusters) {
-//        /* We used the cluster + 1, so correct */
-//        *nb_clusters = i_nb_clusters - 1;
-//    }
-//
-//    igraph_vector_destroy(&new_cluster);
-//
-//    IGRAPH_FINALLY_CLEAN(1);
-//
-//    return IGRAPH_SUCCESS;
-//}
