@@ -103,8 +103,9 @@ int igraph_i_community_eb_get_merges_seed(const igraph_t *graph,
                                      IGRAPH_WEAK));
 
         if (modularity) {
-            IGRAPH_CHECK(igraph_vector_resize(modularity,
-                                              no_of_nodes - no_comps + 1));
+            //// MOD don't know what going on here, so just make vector empty and push coming modularities....
+            IGRAPH_CHECK(igraph_vector_resize(modularity, 0));
+            //// END MOD
         }
         if (res) {
             IGRAPH_CHECK(igraph_matrix_resize(res, no_of_nodes - no_comps,
@@ -138,15 +139,17 @@ int igraph_i_community_eb_get_merges_seed(const igraph_t *graph,
             VECTOR(mymembership)[i] = i;
         }
     }
-    //// MOD END
+    //// END MOD
 
     if (membership) {
+        //// MOD
         igraph_vector_update(membership, &mymembership);
+        //// END MOD
     }
 
     IGRAPH_CHECK(igraph_modularity(graph, &mymembership, &maxmod, weights));
     if (modularity) {
-        VECTOR(*modularity)[0] = maxmod;
+        igraph_vector_push_back(modularity, maxmod);
     }
 
     for (i = igraph_vector_size(edges) - 1; i >= 0; i--) {
@@ -186,7 +189,9 @@ int igraph_i_community_eb_get_merges_seed(const igraph_t *graph,
             } while (0))
 
             if (modularity) {
-                VECTOR(*modularity)[midx + 1] = actmod;
+                //// MOD
+                igraph_vector_push_back(modularity, actmod);
+                //// END MOD
                 if (actmod > maxmod) {
                     maxmod = actmod;
                     if (membership) {

@@ -40,14 +40,18 @@ int main() {
     igraph_vector_init(&membership, 0);
     igraph_vector_init(&seed_membership, n);
 
+
+
+
+    printf(">>>>>>>>>>>>>> SIMPLE 0--1--2: <<<<<<<<<<<<<<<<\n");
+    printf("MOD ALGO RUN>>>>\n\n");
+
     igraph_vector_fill(&seed_membership, -1);
 
     igraph_small(&g, n, IGRAPH_UNDIRECTED,
                  0,  1, 1, 2,
                  -1);
 
-    printf(">>>>>>>>>>>>>> SIMPLE 0--1--2: <<<<<<<<<<<<<<<<\n");
-    printf("MOD ALGO RUN>>>>\n\n");
     igraph_community_fastgreedy_seed(&g, 0, 0, &modularity, &membership, &seed_membership);
     show_results(&g, &modularity, 0, &membership, stdout);
 

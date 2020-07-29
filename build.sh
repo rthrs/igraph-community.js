@@ -37,7 +37,7 @@ for i in "$@"; do
   esac
 done
 
-DEBUG_FLAGS = "-DIGRAPH_FASTCOMM_DEBUG -DIGRAPHJS_DEBUG -DDEBUG"
+DEBUG_FLAGS="-DIGRAPH_FASTCOMM_DEBUG -DIGRAPHJS_DEBUG -DDEBUG"
 
 if [[ "$ENV" == prod ]]; then
 echo ">>> PRODUCTION MODE"
@@ -54,6 +54,10 @@ if [[ $WASM == 0 ]]; then
 else
   echo ">>> WASM MODE"
   export OUT_DIR=dist/wasm
+fi
+
+if [[ "$ENV" == dev ]]; then
+  echo "debug options: $DEBUG_OPTIONS"
 fi
 
 export LDFLAGS="${OPTIMIZE_OPTIONS} ${DEBUG_OPTIONS}"
