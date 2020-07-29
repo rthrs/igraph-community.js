@@ -118,18 +118,18 @@ int igraph_i_community_eb_get_merges_seed(const igraph_t *graph,
 
     //// MOD Assign each node to the sole community of one unless it's in the seed community
     if (seed_membership) {
-        igraph_vector_update(&mymembership, seed_membership); // TODO check case when more then one connected component...
+        igraph_vector_update(&mymembership, seed_membership);
 
         long int max_idx = igraph_vector_which_max(&mymembership);
         long int max_community = VECTOR(mymembership)[max_idx];
-        long int no_other_communities = 0;
 
         IGRAPH_DEBUG(printf("MAX comm: %li\n", max_community));
+        long int act_free_id = max_community + 1;
 
         for (i = 0; i < no_of_nodes; i++) {
             if (VECTOR(mymembership)[i] < 0) {
-                no_other_communities++;
-                VECTOR(mymembership)[i] = max_community + no_other_communities;
+                VECTOR(mymembership)[i] = act_free_id;
+                act_free_id++;
             }
         }
     } else {
@@ -210,6 +210,107 @@ int igraph_i_community_eb_get_merges_seed(const igraph_t *graph,
 }
 //// END MOD
 
+int igraph_i_community_eb_get_merges2(const igraph_t *graph,
+                                      const igraph_vector_t *edges,
+                                      const igraph_vector_t *weights,
+                                      igraph_matrix_t *res,
+                                      igraph_vector_t *bridges,
+                                      igraph_vector_t *modularity,
+                                      igraph_vector_t *membership) {
+
+    igraph_vector_t mymembership;
+    long int no_of_nodes = igraph_vcount(graph);
+    long int i;
+    igraph_real_t maxmod = -1;
+    long int midx = 0;
+    igraph_integer_t no_comps;
+
+    IGRAPH_VECTOR_INIT_FINALLY(&mymembership, no_of_nodes);
+
+    if (membership) {
+        IGRAPH_CHECK(igraph_vector_resize(membership, no_of_nodes));
+    }
+
+    if (modularity || res || bridges) {
+        IGRAPH_CHECK(igraph_clusters(graph, 0, 0, &no_comps,
+                                     IGRAPH_WEAK));
+
+        if (modularity) {
+            IGRAPH_CHECK(igraph_vector_resize(modularity,
+                                              no_of_nodes - no_comps + 1));
+        }
+        if (res) {
+            IGRAPH_CHECK(igraph_matrix_resize(res, no_of_nodes - no_comps,
+                                              2));
+        }
+        if (bridges) {
+            IGRAPH_CHECK(igraph_vector_resize(bridges,
+                                              no_of_nodes - no_comps));
+        }
+    }
+
+    for (i = 0; i < no_of_nodes; i++) {
+        VECTOR(mymembership)[i] = i;
+    }
+    if (membership) {
+        igraph_vector_update(membership, &mymembership);
+    }
+
+    IGRAPH_CHECK(igraph_modularity(graph, &mymembership, &maxmod, weights));
+    if (modularity) {
+        VECTOR(*modularity)[0] = maxmod;
+    }
+
+    for (i = igraph_vector_size(edges) - 1; i >= 0; i--) {
+        long int edge = (long int) VECTOR(*edges)[i];
+        long int from = IGRAPH_FROM(graph, edge);
+        long int to = IGRAPH_TO(graph, edge);
+        long int c1 = (long int) VECTOR(mymembership)[from];
+        long int c2 = (long int) VECTOR(mymembership)[to];
+        igraph_real_t actmod;
+        long int j;
+        if (c1 != c2) {     /* this is a merge */
+            if (res) {
+                MATRIX(*res, midx, 0) = c1;
+                MATRIX(*res, midx, 1) = c2;
+            }
+            if (bridges) {
+                VECTOR(*bridges)[midx] = i + 1;
+            }
+
+            /* The new cluster has id no_of_nodes+midx+1 */
+            for (j = 0; j < no_of_nodes; j++) {
+                if (VECTOR(mymembership)[j] == c1 ||
+                    VECTOR(mymembership)[j] == c2) {
+                    VECTOR(mymembership)[j] = no_of_nodes + midx;
+                }
+            }
+
+            IGRAPH_CHECK(igraph_modularity(graph, &mymembership, &actmod, weights));
+            if (modularity) {
+                VECTOR(*modularity)[midx + 1] = actmod;
+                if (actmod > maxmod) {
+                    maxmod = actmod;
+                    if (membership) {
+                        igraph_vector_update(membership, &mymembership);
+                    }
+                }
+            }
+
+            midx++;
+        }
+    }
+
+    if (membership) {
+        IGRAPH_CHECK(igraph_i_rewrite_membership_vector(membership));
+    }
+
+    igraph_vector_destroy(&mymembership);
+    IGRAPH_FINALLY_CLEAN(1);
+
+    return 0;
+}
+
 /**
  * \function igraph_community_eb_get_merges
  * \brief Calculating the merges, ie. the dendrogram for an edge betweenness community structure
@@ -266,8 +367,7 @@ int igraph_community_eb_get_merges(const igraph_t *graph,
                                    igraph_matrix_t *res,
                                    igraph_vector_t *bridges,
                                    igraph_vector_t *modularity,
-                                   igraph_vector_t *membership,
-                                   igraph_vector_t *seed_membership
+                                   igraph_vector_t *membership
                                    ) {
 
     long int no_of_nodes = igraph_vcount(graph);
@@ -276,9 +376,9 @@ int igraph_community_eb_get_merges(const igraph_t *graph,
     igraph_integer_t no_comps;
 
     if (membership || modularity) {
-        return igraph_i_community_eb_get_merges_seed(graph, edges, weights, res,
+        return igraph_i_community_eb_get_merges2(graph, edges, weights, res,
                 bridges, modularity,
-                membership, seed_membership);
+                membership);
     }
 
     IGRAPH_CHECK(igraph_clusters(graph, 0, 0, &no_comps, IGRAPH_WEAK));
@@ -753,7 +853,7 @@ int igraph_community_edge_betweenness(const igraph_t *graph,
     if (merges || bridges || modularity || membership) {
         IGRAPH_CHECK(igraph_community_eb_get_merges(graph, result, weights, merges,
                      bridges, modularity,
-                     membership, 0));
+                     membership));
     }
 
     if (result_owned) {
@@ -909,16 +1009,13 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
 
     long int ommited_no_of_edges = 0;
 
-    igraph_eit_t eit;
-    igraph_es_t es;
+    igraph_eit_t edgeit;
+    IGRAPH_CHECK(igraph_eit_create(graph, igraph_ess_all(0), &edgeit));
+    IGRAPH_FINALLY(igraph_eit_destroy, &edgeit);
 
-    IGRAPH_CHECK(igraph_es_all(&es, IGRAPH_EDGEORDER_ID));
-    IGRAPH_FINALLY(igraph_es_destroy, &es);
-    IGRAPH_CHECK(igraph_eit_create(graph, es, &eit));
-    IGRAPH_FINALLY(igraph_eit_destroy, &eit);
 
-    while (!IGRAPH_EIT_END(eit)) {
-        igraph_integer_t edge = IGRAPH_EIT_GET(eit);
+    while (!IGRAPH_EIT_END(edgeit)) {
+        igraph_integer_t edge = IGRAPH_EIT_GET(edgeit);
         igraph_integer_t from = IGRAPH_FROM(graph, edge);
         igraph_integer_t to = IGRAPH_TO(graph, edge);
 
@@ -935,10 +1032,11 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
             passive[edge] = 1;
         }
 
-        IGRAPH_EIT_NEXT(eit);
+        IGRAPH_EIT_NEXT(edgeit);
     }
-    igraph_eit_destroy(&eit);
-    igraph_es_destroy(&es);
+
+    igraph_eit_destroy(&edgeit);
+    IGRAPH_FINALLY_CLEAN(1);
 
     IGRAPH_DEBUG(printf("OMMITED: %li\n", ommited_no_of_edges));
     //// MOD END
@@ -1169,7 +1267,7 @@ int igraph_community_edge_betweenness_seed(const igraph_t *graph,
     }
 
     if (merges || bridges || modularity || membership) {
-        IGRAPH_CHECK(igraph_community_eb_get_merges(graph, result, weights, merges,
+        IGRAPH_CHECK(igraph_i_community_eb_get_merges_seed(graph, result, weights, merges,
                                                     bridges, modularity,
                                                     membership, seed_membership));
     }

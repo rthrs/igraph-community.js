@@ -67,11 +67,11 @@ function runGNonSeeds(mrHiComms, johnComms, runGNSeed, graph) {
             const mrHiSeed = mrHiComms[i];
             const johnSeed = johnComms[j];
 
-            console.log(`${c++}/${steps}`);
+            // console.log(`${c++}/${steps}`);
             // console.log(`${c++}/${steps}`, mrHiSeed, johnSeed);
 
             const seedMembership = makeMembership(mrHiSeed, johnSeed);
-            console.log(mrHiSeed, johnSeed);
+            // console.log(mrHiSeed, johnSeed);
             const { modularity, membership } = runGNSeed(seedMembership);
             // console.log({ modularity, membership })
             const q = R.reduce(R.max, -Infinity, modularity);

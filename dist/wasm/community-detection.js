@@ -671,8 +671,8 @@ var wasmMemory;
 // In the wasm backend, we polyfill the WebAssembly object,
 // so this creates a (non-native-wasm) table for us.
 var wasmTable = new WebAssembly.Table({
-  'initial': 110,
-  'maximum': 110 + 0,
+  'initial': 109,
+  'maximum': 109 + 0,
   'element': 'anyfunc'
 });
 
@@ -1291,11 +1291,11 @@ function updateGlobalBufferAndViews(buf) {
 }
 
 var STATIC_BASE = 1024,
-    STACK_BASE = 5316352,
+    STACK_BASE = 5316048,
     STACKTOP = STACK_BASE,
-    STACK_MAX = 73472,
-    DYNAMIC_BASE = 5316352,
-    DYNAMICTOP_PTR = 73312;
+    STACK_MAX = 73168,
+    DYNAMIC_BASE = 5316048,
+    DYNAMICTOP_PTR = 73008;
 
 assert(STACK_BASE % 16 === 0, 'stack must start aligned');
 assert(DYNAMIC_BASE % 16 === 0, 'heap must start aligned');
@@ -1863,7 +1863,7 @@ var ASM_CONSTS = {
 
 
 
-// STATICTOP = STATIC_BASE + 72448;
+// STATICTOP = STATIC_BASE + 72144;
 /* global initializers */  __ATINIT__.push({ func: function() { ___wasm_call_ctors() } });
 
 
@@ -4595,7 +4595,7 @@ var ASM_CONSTS = {
     }
 
   function _emscripten_get_sbrk_ptr() {
-      return 73312;
+      return 73008;
     }
 
   function _emscripten_memcpy_big(dest, src, num) {
@@ -4805,10 +4805,10 @@ var ASM_CONSTS = {
   }
 
   
-  var ___tm_current=73328;
+  var ___tm_current=73024;
   
   
-  var ___tm_timezone=(stringToUTF8("GMT", 73376, 4), 73376);function _gmtime_r(time, tmPtr) {
+  var ___tm_timezone=(stringToUTF8("GMT", 73072, 4), 73072);function _gmtime_r(time, tmPtr) {
       var date = new Date(HEAP32[((time)>>2)]*1000);
       HEAP32[((tmPtr)>>2)]=date.getUTCSeconds();
       HEAP32[(((tmPtr)+(4))>>2)]=date.getUTCMinutes();
@@ -5015,6 +5015,9 @@ var _memset = Module["_memset"] = createExportWrapper("memset");
 
 /** @type {function(...*):?} */
 var _realloc = Module["_realloc"] = createExportWrapper("realloc");
+
+/** @type {function(...*):?} */
+var _hashmap_get_key = Module["_hashmap_get_key"] = createExportWrapper("hashmap_get_key");
 
 /** @type {function(...*):?} */
 var _testSetjmp = Module["_testSetjmp"] = createExportWrapper("testSetjmp");

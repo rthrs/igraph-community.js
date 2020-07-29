@@ -114,8 +114,7 @@ DECLDIR int igraph_community_eb_get_merges(const igraph_t *graph,
         igraph_matrix_t *merges,
         igraph_vector_t *bridges,
         igraph_vector_t *modularity,
-        igraph_vector_t *membership,
-        igraph_vector_t *seed_membership);
+        igraph_vector_t *membership);
 
 // Girvan-Newman_Seed
 DECLDIR int igraph_community_edge_betweenness_seed(const igraph_t *graph,

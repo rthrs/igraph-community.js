@@ -37,26 +37,28 @@ for i in "$@"; do
   esac
 done
 
+DEBUG_FLAGS = "-DIGRAPH_FASTCOMM_DEBUG -DIGRAPHJS_DEBUG -DDEBUG"
+
 if [[ "$ENV" == prod ]]; then
 echo ">>> PRODUCTION MODE"
-  export OPTIMIZE_FLAGS="-O3"
+  export OPTIMIZE_OPTIONS="-O3"
 else
   echo ">>> DEVELOPEMENT MODE"
-  export DEBUG_FLAGS="-g4 -DIGRAPHJS_DEBUG"
+  export DEBUG_OPTIONS="-g4 $DEBUG_FLAGS"
 fi
 
 if [[ $WASM == 0 ]]; then
   echo ">>> ASM.JS MODE"
   export OUT_DIR=dist/asm
-  export DEBUG_FLAGS="-DIGRAPHJS_DEBUG" # debug in asm.js mode not possible
+  export DEBUG_OPTIONS=$DEBUG_FLAGS # -g4 debug in asm.js mode not possible
 else
   echo ">>> WASM MODE"
   export OUT_DIR=dist/wasm
 fi
 
-export LDFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
-export CFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
-export CXXFLAGS="${OPTIMIZE_FLAGS} ${DEBUG_FLAGS}"
+export LDFLAGS="${OPTIMIZE_OPTIONS} ${DEBUG_OPTIONS}"
+export CFLAGS="${OPTIMIZE_OPTIONS} ${DEBUG_OPTIONS}"
+export CXXFLAGS="${OPTIMIZE_OPTIONS} ${DEBUG_OPTIONS}"
 
 # Set EMCC_DEBUG=1 to see verbose emcc output
 # https://developers.google.com/web/updates/2019/01/emscripten-npm

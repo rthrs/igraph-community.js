@@ -1123,7 +1123,7 @@ int calculate_initial_eij(const struct hashmap_s *eij_map, const igraph_t *graph
 
     igraph_integer_t ffrom, fto;
 
-    for (;!IGRAPH_EIT_END(edgeit); IGRAPH_EIT_NEXT(edgeit)) {
+    while (!IGRAPH_EIT_END(edgeit)) {
         long int eidx = IGRAPH_EIT_GET(edgeit);
         igraph_edge(graph, (igraph_integer_t) eidx, &ffrom, &fto);
 
@@ -1163,6 +1163,7 @@ int calculate_initial_eij(const struct hashmap_s *eij_map, const igraph_t *graph
             *val = *val + 1;
             debug("eij UPDATE to: %li\n", *val);
         }
+        IGRAPH_EIT_NEXT(edgeit);
     }
 
     igraph_eit_destroy(&edgeit);
@@ -1311,7 +1312,8 @@ int igraph_community_fastgreedy_seed(const igraph_t *graph,
         long int seed_comm_id = VECTOR(*seed_membership)[i];
         long int act_comm_id = (seed_comm_id == -1) ? act_free_id : seed_comm_id;
 
-        if (seed_comm_id == -1) {
+        // id == -1 means node not in seed community
+        if (seed_comm_id < 0) {
             // isolated node
             igraph_vector_ptr_init(&communities.e[act_comm_id].neis, 0);
             communities.e[act_comm_id].id = (igraph_integer_t) act_comm_id;
