@@ -208,7 +208,8 @@ int runCommunityDetection(
             break;
 
         case LOUVAIN_SEED:
-            igraph_community_multilevel_seed(&g, 0, &membership, 0, &modularity, &seed_membership_v);
+            igraph_community_multilevel_seed(&g, 0, &membership, 0, &modularity,
+                                             &seed_membership_v, /*meta nodes first*/ 1);
             break;
 
         case EDGE_BETWEENNESS_SEED:

@@ -248,8 +248,9 @@ DECLDIR int igraph_community_multilevel_seed(const igraph_t *graph,
                                         igraph_vector_t *membership,
                                         igraph_matrix_t *memberships,
                                         igraph_vector_t *modularity,
-                                        // NEW PARAM
-                                        igraph_vector_t *seed_membership);
+                                        // NEW PARAMS
+                                        igraph_vector_t *seed_membership,
+                                        igraph_bool_t meta_nodes_first);
 
 
 DECLDIR int igraph_community_leiden(const igraph_t *graph,
