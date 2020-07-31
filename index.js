@@ -41,7 +41,7 @@ const getAPI = ({ wasm = true, onLoad = () => {} } = {}) =>
 function loadPublicAPI(onLoaded, wasm) {
     const Module = wasm ? require('./dist/wasm/community-detection.js') : require('./dist/asm/community-detection.js');
 
-    Module.onRuntimeInitialized = async _ => {
+    Module.onRuntimeInitialized = () => {
         const api = {
             // Main algorithms
             edgeBetweenness: Module.cwrap('edgeBetweenness', 'number', ['number', 'number', 'number']),
@@ -70,7 +70,7 @@ function loadPublicAPI(onLoaded, wasm) {
             getModularitiesFoundPointer: Module.cwrap('getModularitiesFoundPointer', 'number', []),
             getModularitiesFoundSize: Module.cwrap('getModularitiesFoundSize', 'number', []),
 
-            freeResult: Module.cwrap('freeResult', '', []),
+            freeResult: Module.cwrap('freeResult', '', [])
         };
 
         // @edges: undirected edges list, the first two elements are the first edge, etc.
@@ -97,7 +97,9 @@ function loadPublicAPI(onLoaded, wasm) {
             let seedMembershipPointer;
             if (seedMembership) {
                 seedMembershipPointer = api.createBuffer(seedMembership.length);
-                const uint8SeedMembership = new Uint8Array(new Float64Array(seedMembership).buffer);
+                const reindexedSeeds = reindexSeedMembership(seedMembership);
+                console.log(seedMembership, reindexedSeeds);
+                const uint8SeedMembership = new Uint8Array(reindexedSeeds.buffer);
                 Module.HEAP8.set(uint8SeedMembership, seedMembershipPointer);
 
                 args.push(seedMembershipPointer);
@@ -118,7 +120,7 @@ function loadPublicAPI(onLoaded, wasm) {
                 membership,
                 modularity,
                 modularitiesFound
-            }
+            };
         }
 
         function getResultData(pointer, size) {
@@ -126,10 +128,34 @@ function loadPublicAPI(onLoaded, wasm) {
             return new Float64Array(resultView);
         }
 
+        function reindexSeedMembership(seedMembership) {
+            const n = seedMembership.length;
+            const newSeedMembership = new Float64Array(n);
+            const idxs = {};
+            let actFreeId = 0;
+
+            for (let i = 0; i < n; i++) {
+                const communityId = seedMembership[i];
+
+                if (communityId < 0) {
+                    newSeedMembership[i] = -1;
+                    continue;
+                }
+
+                if (idxs[communityId] !== undefined) {
+                    newSeedMembership[i] = idxs[communityId];
+                } else {
+                    idxs[communityId] = actFreeId;
+                    newSeedMembership[i] = actFreeId;
+                    actFreeId++;
+                }
+            }
+
+            return newSeedMembership;
+        }
+
         onLoaded({
-            ...api,
-            runCommunityDetection,
-            getResultData
+            runCommunityDetection
         });
     };
 }
