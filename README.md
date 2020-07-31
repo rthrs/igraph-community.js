@@ -71,10 +71,14 @@ type runCommunityDetection = (
     name: AlgorithmNameType | SeedsAlgorithmNameType,
     n: number,
     edges: Array<number>,
-    options?: {| seedMembership: Array<number> |}
+    options?: {
+        seedMembership?: Array<number>,
+        progressHandler?: (percent: number) => void
+    }
 ) => {|
-    membership: Array<number>,
-    modularity: Array<number>
+    membership: Array<number>,       // membership array for highest modularity partition found
+    modularity: number,              // modularity measure of returned membership
+    modularitiesFound: Array<number> // modularities array for partitions found during the algorithm
 |};
 ```
 
@@ -99,7 +103,7 @@ type SeedsAlgorithmNameType =
     | 'edgeBetweennessSeed';
 ```
 
-Lists of algorithms name is also available in constants: `{ ALGORITHM_NAMES, SEED_ALGORITHM_NAMES } = require('igraph-community')`;
+Lists of algorithms name is also available in constants: `{ IGRAPH_ALGORITHM_NAMES, SEED_ALGORITHM_NAMES, ALL_ALGORITHM_NAMES } = require('igraph-community')`;
 
 When using algorithms of `SeedsAlgorithmNameType`` for partially known communities you should pass `seedMembership` option.
 
@@ -121,7 +125,15 @@ igraphCommunity.getAPI().then((api) => {
 
 # Handling evaluation progress
 
-TODO. 
+```js
+const progressHandler = (percent) => {
+    console.log(percent);
+}
+
+runCommunityDetection('fastGreedy', n, edges, { progressHandler });
+```
+
+Remark: only several algorithms provide progress handling. 
 
 # Manual build of the project
 

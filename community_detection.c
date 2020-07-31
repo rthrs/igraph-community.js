@@ -93,12 +93,15 @@ size_t modularities_found_size;
 
 igraph_real_t membership_modularity_result;
 
+int progress_handler(const char *message, igraph_real_t percent, void* data) {
+    IGRAPH_UNUSED(data);
 
-int progress_handler(const char *message, igraph_real_t percent, void *data) {
-    while(*message!='\0') {
-        printf("%c", *message++);
-    }
-    printf("%.2f%%\n", percent);
+    EM_ASM({
+        if (console && console.__IGRAPH_COMMUNITY__PROGRESS_HANDLER) {
+            console.__IGRAPH_COMMUNITY__PROGRESS_HANDLER($0);
+        }
+    }, percent);
+
     return IGRAPH_SUCCESS;
 }
 
@@ -108,8 +111,7 @@ int runCommunityDetection(
     igraph_integer_t n, const igraph_real_t *edges, size_t edges_len,
     const igraph_real_t *seed_membership
 ) {
-    // TODO set external progress handler from JS
-    // igraph_set_progress_handler(progress_handler);
+    igraph_set_progress_handler(progress_handler);
 
     // Init graph from edges
     igraph_t g;

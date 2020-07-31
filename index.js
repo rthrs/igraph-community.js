@@ -1,4 +1,4 @@
-const ALGORITHM_NAMES = [
+const IGRAPH_ALGORITHM_NAMES = [
     'edgeBetweenness',
     'fastGreedy',
     'infomap',
@@ -18,7 +18,7 @@ const SEED_ALGORITHM_NAMES = [
 ];
 
 const ALL_ALGORITHM_NAMES = [
-    ...ALGORITHM_NAMES,
+    ...IGRAPH_ALGORITHM_NAMES,
     ...SEED_ALGORITHM_NAMES
 ];
 
@@ -79,7 +79,15 @@ function loadPublicAPI(onLoaded, wasm) {
                 throw new Error(`Uknown algorithm name: '${algorithmName}'. Possible options are:  ${ALL_ALGORITHM_NAMES}`);
             }
 
-            const { seedMembership = null } = options;
+            const { seedMembership = null, progressHandler = null } = options;
+
+            if (SEED_ALGORITHM_NAMES.includes(algorithmName) && !seedMembership) {
+                throw new Error(`Option 'seedMembership' required`);
+            }
+
+            if (progressHandler) {
+                console.__IGRAPH_COMMUNITY__PROGRESS_HANDLER = progressHandler;
+            }
 
             const edgesPointer = api.createBuffer(edges.length);
             const uint8Edges = new Uint8Array(new Float64Array(edges).buffer);
@@ -128,7 +136,7 @@ function loadPublicAPI(onLoaded, wasm) {
 
 module.exports = {
     getAPI,
-    ALGORITHM_NAMES,
+    IGRAPH_ALGORITHM_NAMES,
     SEED_ALGORITHM_NAMES,
     ALL_ALGORITHM_NAMES
 };

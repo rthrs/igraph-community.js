@@ -1,6 +1,10 @@
 const { ZKC } = require('../graphs');
 const { printAlgorithmName } = require('../utils');
-const { getAPI, ALGORITHM_NAMES, SEED_ALGORITHM_NAMES } = require('../../index');
+const { getAPI, IGRAPH_ALGORITHM_NAMES, SEED_ALGORITHM_NAMES } = require('../../index');
+
+const progressHandler = (percent) => {
+    console.log('PROGRESS handler test: ' + percent);
+};
 
 getAPI({ wasm: true }).then((api) => {
     const { runCommunityDetection } = api;
@@ -8,7 +12,7 @@ getAPI({ wasm: true }).then((api) => {
 
     console.log('\n\n>>> Original algorithms');
 
-    ALGORITHM_NAMES.forEach((name) => {
+    IGRAPH_ALGORITHM_NAMES.forEach((name) => {
         printAlgorithmName(name);
         const { modularity, membership } = runCommunityDetection(name, n, edges);
         console.log(`membership: [${membership}]`);
@@ -37,4 +41,7 @@ getAPI({ wasm: true }).then((api) => {
         console.log(`membership: [${membership}]`);
         console.log(`modularity: ${modularity}`);
     });
+
+    console.log();
+    runCommunityDetection('fastGreedy', n, edges, { progressHandler });
 });
