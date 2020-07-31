@@ -98,7 +98,6 @@ function loadPublicAPI(onLoaded, wasm) {
             if (seedMembership) {
                 seedMembershipPointer = api.createBuffer(seedMembership.length);
                 const reindexedSeeds = reindexSeedMembership(seedMembership);
-                console.log(seedMembership, reindexedSeeds);
                 const uint8SeedMembership = new Uint8Array(reindexedSeeds.buffer);
                 Module.HEAP8.set(uint8SeedMembership, seedMembershipPointer);
 
