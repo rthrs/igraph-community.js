@@ -9,7 +9,7 @@ This repository is a fork of `git@github.com:vtraag/igraph.git` on branch `fix/v
 # Installation
 
 ```
-npm install --save git+ssh://git@github.com:rthrs/igraph-community.js.git
+npm install --save git+https://github.com/rthrs/igraph-community.js.git
 ```
 
 # Usage
