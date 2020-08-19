@@ -60,6 +60,9 @@ function loadPublicAPI(onLoaded, wasm) {
             louvainSeed: Module.cwrap('louvainSeed', 'number', ['number', 'number', 'number', 'number']),
             edgeBetweennessSeed: Module.cwrap('edgeBetweennessSeed', 'number', ['number', 'number', 'number', 'number']),
 
+            // NMI
+            compareCommunitiesNMI: Module.cwrap('compareCommunitiesNMI', 'number', ['number', 'number', 'number']),
+
             // Helpers
             createBuffer: Module.cwrap('createBuffer', 'number', ['number']),
             create_buffer: Module.cwrap('create_buffer', 'number', ['number', 'number']),
@@ -89,9 +92,7 @@ function loadPublicAPI(onLoaded, wasm) {
                 console.__IGRAPH_COMMUNITY__PROGRESS_HANDLER = progressHandler;
             }
 
-            const edgesPointer = api.createBuffer(edges.length);
-            const uint8Edges = new Uint8Array(new Float64Array(edges).buffer);
-            Module.HEAP8.set(uint8Edges, edgesPointer);
+            const edgesPointer = allocateBuffer(edges);
 
             const args = [n, edgesPointer, edges.length];
             let seedMembershipPointer;
@@ -110,7 +111,8 @@ function loadPublicAPI(onLoaded, wasm) {
             const modularitiesFound = getResultData(api.getModularitiesFoundPointer(), api.getModularitiesFoundSize());
 
             api.freeResult();
-            api.destroyBuffer(edgesPointer);
+            freeBuffer(edgesPointer);
+
             if (seedMembershipPointer) {
                 api.destroyBuffer(seedMembershipPointer);
             }
@@ -120,6 +122,17 @@ function loadPublicAPI(onLoaded, wasm) {
                 modularity,
                 modularitiesFound
             };
+        }
+
+        function allocateBuffer(array) {
+            const pointer = api.createBuffer(array.length);
+            const uint8Data = new Uint8Array(new Float64Array(array).buffer);
+            Module.HEAP8.set(uint8Data, pointer);
+            return pointer;
+        }
+
+        function freeBuffer(pointer) {
+            api.destroyBuffer(pointer);
         }
 
         function getResultData(pointer, size) {
@@ -153,8 +166,24 @@ function loadPublicAPI(onLoaded, wasm) {
             return newSeedMembership;
         }
 
+        function compareCommunitiesNMI(membership1, membership2) {
+            if (membership1.length !== membership2.length) {
+                throw new Error('compareCommunitiesNMI: membership array lengths have to be equal.')
+            }
+            const m1Pointer = allocateBuffer(membership1);
+            const m2Pointer = allocateBuffer(membership2);
+
+            const nmi = api.compareCommunitiesNMI(m1Pointer, m2Pointer, membership1.length);
+
+            freeBuffer(m1Pointer);
+            freeBuffer(m2Pointer);
+
+            return nmi;
+        }
+
         onLoaded({
-            runCommunityDetection
+            runCommunityDetection,
+            compareCommunitiesNMI
         });
     };
 }

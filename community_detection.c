@@ -323,6 +323,21 @@ int edgeBetweennessSeed(igraph_integer_t n, const igraph_real_t *edges, size_t e
     return runCommunityDetection(EDGE_BETWEENNESS_SEED, n, edges, edges_len, seed_membership);
 }
 
+// NMI
+
+EMSCRIPTEN_KEEPALIVE
+igraph_real_t compareCommunitiesNMI(const igraph_real_t *c1, const igraph_real_t *c2, size_t len) {
+    igraph_real_t nmi;
+    igraph_vector_t v1, v2;
+
+    igraph_vector_view(&v1, c1, len);
+    igraph_vector_view(&v2, c2, len);
+
+    igraph_compare_communities(&v1, &v2, &nmi, IGRAPH_COMMCMP_NMI);
+
+    return nmi;
+}
+
 // Helpers
 
 EMSCRIPTEN_KEEPALIVE

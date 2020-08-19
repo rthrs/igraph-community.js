@@ -7,16 +7,18 @@ const progressHandler = (percent) => {
 };
 
 getAPI({ wasm: true }).then((api) => {
-    const { runCommunityDetection } = api;
-    const { n, edges } = ZKC;
+    const { runCommunityDetection, compareCommunitiesNMI } = api;
+    const { n, edges, groundTruthMembership } = ZKC;
 
     console.log('\n\n>>> Original algorithms');
 
     IGRAPH_ALGORITHM_NAMES.forEach((name) => {
         printAlgorithmName(name);
         const { modularity, membership } = runCommunityDetection(name, n, edges);
+        const nmi = compareCommunitiesNMI(groundTruthMembership, membership);
         console.log(`membership: [${membership}]`);
         console.log(`modularity: ${modularity}`);
+        console.log(`NMI: ${nmi}`);
     });
 
     const seedMembership = new Array(n).fill(-1);
@@ -26,8 +28,10 @@ getAPI({ wasm: true }).then((api) => {
     [ 'fastGreedy', 'fastGreedySeed', 'louvain', 'louvainSeed','edgeBetweenness','edgeBetweennessSeed'].forEach((name) => {
         printAlgorithmName(name);
         const { modularity, membership } = runCommunityDetection(name, n, edges, { seedMembership });
+        const nmi = compareCommunitiesNMI(groundTruthMembership, membership);
         console.log(`membership: [${membership}]`);
         console.log(`modularity: ${modularity}`);
+        console.log(`NMI: ${nmi}`);
     });
 
     seedMembership[33] = seedMembership[31] = 0;
@@ -38,8 +42,10 @@ getAPI({ wasm: true }).then((api) => {
     SEED_ALGORITHM_NAMES.forEach((name) => {
         printAlgorithmName(name);
         const { modularity, membership } = runCommunityDetection(name, n, edges, { seedMembership });
+        const nmi = compareCommunitiesNMI(groundTruthMembership, membership);
         console.log(`membership: [${membership}]`);
         console.log(`modularity: ${modularity}`);
+        console.log(`NMI: ${nmi}`);
     });
 
     console.log();
