@@ -4304,7 +4304,11 @@ int igraph_community_multilevel_seed(const igraph_t *graph,
     igraph_vector_destroy(&m);
     igraph_vector_destroy(&w);
     igraph_vector_destroy(&level_membership);
-    IGRAPH_FINALLY_CLEAN(4);
+
+    igraph_vector_destroy(&nodes_permutation);
+    igraph_vector_destroy(&comms_visited);
+
+    IGRAPH_FINALLY_CLEAN(6);
 
     return 0;
 }

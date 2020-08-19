@@ -7,7 +7,7 @@ const { getAPI } = require('../index');
 getAPI().then((api) => {
     const { runCommunityDetection } = api;
     const { n, edges } = ZKC;
-    const runGNSeedOnZKC = (seedMembership) => runCommunityDetection('edgeBetweennessSeed', n, edges, { seedMembership });
+    const runGNSeedOnZKC = (seedMembership) => runCommunityDetection('louvainSeed', n, edges, { seedMembership });
     runBenchmark(runGNSeedOnZKC, ZKC);
 });
 
