@@ -118,9 +118,9 @@ function loadPublicAPI(onLoaded, wasm) {
             }
 
             return {
-                membership,
+                membership: Array.from(membership),
                 modularity,
-                modularitiesFound
+                modularitiesFound: Array.from(modularitiesFound)
             };
         }
 
