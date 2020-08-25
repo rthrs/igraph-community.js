@@ -22,6 +22,12 @@ const ALL_ALGORITHM_NAMES = [
     ...SEED_ALGORITHM_NAMES
 ];
 
+const COMPARE_COMMUNITIES_METHODS = {
+    NMI: 'NMI',
+    RI: 'RI',
+    ARI: 'ARI'
+};
+
 let publicAPI = null;
 
 const getAPI = ({ wasm = true, onLoad = () => {} } = {}) =>
@@ -43,7 +49,7 @@ function loadPublicAPI(onLoaded, wasm) {
 
     Module.onRuntimeInitialized = () => {
         const api = {
-            // Main algorithms
+            // Main algorithms API
             edgeBetweenness: Module.cwrap('edgeBetweenness', 'number', ['number', 'number', 'number']),
             fastGreedy: Module.cwrap('fastGreedy', 'number', ['number', 'number', 'number']),
             infomap: Module.cwrap('infomap', 'number', ['number', 'number', 'number']),
@@ -55,13 +61,15 @@ function loadPublicAPI(onLoaded, wasm) {
             spinglass: Module.cwrap('spinglass', 'number', ['number', 'number', 'number']),
             walktrap: Module.cwrap('walktrap', 'number', ['number', 'number', 'number']),
 
-            // Seed algorithms
+            // Seed algorithms API
             fastGreedySeed: Module.cwrap('fastGreedySeed', 'number', ['number', 'number', 'number', 'number']),
             louvainSeed: Module.cwrap('louvainSeed', 'number', ['number', 'number', 'number', 'number']),
             edgeBetweennessSeed: Module.cwrap('edgeBetweennessSeed', 'number', ['number', 'number', 'number', 'number']),
 
-            // NMI
+            // Compare communities API
             compareCommunitiesNMI: Module.cwrap('compareCommunitiesNMI', 'number', ['number', 'number', 'number']),
+            compareCommunitiesRI: Module.cwrap('compareCommunitiesRI', 'number', ['number', 'number', 'number']),
+            compareCommunitiesARI: Module.cwrap('compareCommunitiesARI', 'number', ['number', 'number', 'number']),
 
             // Helpers
             createBuffer: Module.cwrap('createBuffer', 'number', ['number']),
@@ -166,24 +174,30 @@ function loadPublicAPI(onLoaded, wasm) {
             return newSeedMembership;
         }
 
-        function compareCommunitiesNMI(membership1, membership2) {
+        function compareCommunities(method, membership1, membership2) {
+            if (!COMPARE_COMMUNITIES_METHODS[method]) {
+                throw new Error(`Unknown communities comparision method`);
+            }
+
             if (membership1.length !== membership2.length) {
                 throw new Error('compareCommunitiesNMI: membership array lengths have to be equal.')
             }
+
             const m1Pointer = allocateBuffer(membership1);
             const m2Pointer = allocateBuffer(membership2);
 
-            const nmi = api.compareCommunitiesNMI(m1Pointer, m2Pointer, membership1.length);
+            const compare = api[`compareCommunities${method}`];
+            const value = compare(m1Pointer, m2Pointer, membership1.length);
 
             freeBuffer(m1Pointer);
             freeBuffer(m2Pointer);
 
-            return nmi;
+            return value;
         }
 
         onLoaded({
             runCommunityDetection,
-            compareCommunitiesNMI
+            compareCommunities
         });
     };
 }
@@ -192,5 +206,6 @@ module.exports = {
     getAPI,
     IGRAPH_ALGORITHM_NAMES,
     SEED_ALGORITHM_NAMES,
-    ALL_ALGORITHM_NAMES
+    ALL_ALGORITHM_NAMES,
+    COMPARE_COMMUNITIES_METHODS
 };
