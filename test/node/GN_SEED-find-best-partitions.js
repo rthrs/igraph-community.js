@@ -1,8 +1,8 @@
 const R = require('ramda');
 const cliProgress = require('cli-progress');
 const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-const { ZKC } = require('../test/graphs');
-const { getAPI } = require('../index');
+const { ZKC } = require('../graphs');
+const { getAPI } = require('../../index');
 
 getAPI().then((api) => {
     const { runCommunityDetection } = api;
@@ -74,13 +74,9 @@ function runGNonSeeds(mrHiComms, johnComms, runGNSeed, graph) {
             const mrHiSeed = mrHiComms[i];
             const johnSeed = johnComms[j];
 
-            // console.log(`${c++}/${steps}`);
-            // console.log(`${c++}/${steps}`, mrHiSeed, johnSeed);
-
             const seedMembership = makeMembership(mrHiSeed, johnSeed);
-            // console.log(mrHiSeed, johnSeed);
             const { modularity, membership } = runGNSeed(seedMembership);
-            // console.log({ modularity, membership })
+
             const q = modularity;
             if (q > bestModularity) {
                 bestMembership = membership;
@@ -131,16 +127,6 @@ function powerSet(array) {
     }
 
     return result.sort((a, b) => {
-        // FIXME
-        // if (a.length === b.length) {
-        //     if (R.lt(a, b)) {
-        //         return -1;
-        //     }
-        //     if (R.gt(a, b)) {
-        //         return 1;
-        //     }
-        //     return 0;
-        // }
         return a.length - b.length;
     });
 }
