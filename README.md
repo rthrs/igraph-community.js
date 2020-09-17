@@ -48,7 +48,7 @@ See example form `test/worker` directory for reference.
 
 # API
 
-Interface includes 9 community detection algorithms from igraph and 3 modifications of them handling seed communities.
+Interface includes 10 community detection algorithms from igraph and 3 modifications of them handling seed communities. Also, there possibility to compare membership vectors via RI, ARI and NMI metrics.
 
 Analysis of undirected and unweighted graph is available only so far. Currently, also no additional arguments passing (as in the igraph's documentation) is possible. Check igraph documentation for algorithms reference.
 
@@ -58,7 +58,7 @@ To get API access it is necessary to invoke `getAPI` function first, which retur
 const igraphCommunity = require('igraph-community');
 
 igraphCommunity.getAPI().then((api) => {
-    const { runCommunityDetection } = api;
+    const { runCommunityDetection, compareCommunities } = api;
 
     // do your stuff here...
 });
@@ -120,6 +120,39 @@ const seedMembership = [-1, 0, 0, -1];
 igraphCommunity.getAPI().then((api) => {
     const { runCommunityDetection } = api;
     runCommunityDetection('louvainSeed', graph.n, graph.edges, { seedMembership });
+});
+```
+
+### compareCommunities
+
+```flow js
+type compareCommunities = (
+    method: CompareCommunitiesMethods,
+    membership1: Array<number>,
+    membership2: Array<number>
+) => number
+```
+
+```js
+type CompareCommunitiesMethods = 
+      'RI'
+    | 'ARI'
+    | 'NMI';
+```
+
+```js
+const igraphCommunity = require('igraph-community');
+const { COMPARE_COMMUNITIES_METHODS } = igraphCommunity;
+
+const groundTruthMembership = <...>;
+
+igraphCommunity.getAPI().then((api) => {
+    const { runCommunityDetection, compareCommunities } = api;
+    
+    const { membership } = runCommunityDetection('louvain', graph.n, graph.edges);
+    
+    compareCommunities(COMPARE_COMMUNITIES_METHODS.NMI, groundTruthMembership, membership)
+
 });
 ```
 
