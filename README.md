@@ -1,90 +1,110 @@
-# igraph-community.js library
 
-Emscripting [igraph's](https://igraph.org/) community detection algorithms to make them run in JavaScript.
- 
-Also provides Clauset-Newman-Moore, Louvain and Girvan-Newman algorithms modifications when partial source communities (seeds) are known.
+# igraph-community.js Library
 
-This repository is a fork of `git@github.com:vtraag/igraph.git` on branch `fix/vector_binsearch` (version 0.9.0-pre)
+This project provides Emscripten-compiled versions of [igraph's](https://igraph.org/) community detection algorithms, making them usable in JavaScript environments.
 
-# Installation
+It also includes modified versions of the Clauset-Newman-Moore, Louvain, and Girvan-Newman algorithms that support partial input through known source communities (seeds).
 
-```
+> This repository is a fork of `git@github.com:vtraag/igraph.git`, branch `fix/vector_binsearch` (version 0.9.0-pre).
+
+---
+
+## Installation
+
+```bash
 npm install --save git+https://github.com/rthrs/igraph-community.js.git
 ```
 
-# Usage
+---
 
-This library could be run in any JS environment and provides both asm.js and Wasm build modules. It could also be run in a separate Web Worker.
+## Usage
 
-Graph are represented as a pair - number denoting and edges array. Vertices ids are numbers from 0 to n, and first two numbers in the array represents first edge and so forth. 
+This library runs in any JavaScript environment and provides both `asm.js` and `WebAssembly` (Wasm) modules. It can also be executed inside a Web Worker.
 
-For seed communities algorithms, membership of vertices to specific communities is available as parameter. Array index denotes vertex id and value is a id of community the vertex belongs to. 
+Graphs are represented as an object with:
+- `n`: number of vertices
+- `edges`: a flat array of numbers representing edges. Each pair of numbers defines an edge (e.g., `[0, 1, 0, 2]` represents edges 0–1 and 0–2).
 
-## Node.js
+For seed-based algorithms, you can pass an array representing initial community memberships:
+- Each index corresponds to a vertex ID
+- Values indicate the community ID (or -1 if unknown)
+
+### Node.js Example
+
 ```js
 const igraphCommunity = require('igraph-community');
 
 const graph = {
     n: 4,
-    edges: [0,  1,  0,  2,  0,  3]
+    edges: [0, 1, 0, 2, 0, 3]
 };
 
 igraphCommunity.getAPI().then((api) => {
     const { runCommunityDetection } = api;
 
-    const algorithmName = 'fastGreedy';
-    const { modularity, membership } = runCommunityDetection(algorithmName, graph.n, graph.edges);
+    const algorithm = 'fastGreedy';
+    const { membership, modularity } = runCommunityDetection(algorithm, graph.n, graph.edges);
     console.log(membership, modularity);
 });
 ```
 
-## HTML
+### HTML Example
 
-See example from `test/html` directory for reference  (but first copy files from `dist/wasm` or `dist/asm` to your directory).
+See the example in the `test/html` directory.  
+Make sure to copy the appropriate files from `dist/wasm` or `dist/asm` to your working directory.
 
-## Web Worker
+### Web Worker Example
 
-See example form `test/worker` directory for reference.
+Refer to the example in the `test/worker` directory.
 
-# API
+---
 
-Interface includes 10 community detection algorithms from igraph and 3 modifications of them handling seed communities. Also, there possibility to compare membership vectors via RI, ARI and NMI metrics.
+## API
 
-Analysis of undirected and unweighted graph is available only so far. Currently, also no additional arguments passing (as in the igraph's documentation) is possible. Check igraph documentation for algorithms reference.
+The API includes:
+- 10 standard igraph community detection algorithms
+- 3 modified versions that support seed communities
+- Tools for comparing community membership vectors using RI, ARI, and NMI metrics
 
-To get API access it is necessary to invoke `getAPI` function first, which returns Promise containing API object.
+> Currently, only undirected and unweighted graphs are supported.  
+> Algorithm-specific arguments (as in igraph's native API) are not yet implemented.  
+> Please refer to the official igraph documentation for algorithm references.
+
+To use the API, you must first call `getAPI()`, which returns a Promise resolving to the API object.
 
 ```js
-const igraphCommunity = require('igraph-community');
-
 igraphCommunity.getAPI().then((api) => {
     const { runCommunityDetection, compareCommunities } = api;
 
-    // do your stuff here...
+    // Your code here...
 });
-``` 
+```
 
-### runCommunityDetection
+---
 
-```flow js
+### `runCommunityDetection`
+
+```ts
 type runCommunityDetection = (
     name: AlgorithmNameType | SeedsAlgorithmNameType,
     n: number,
-    edges: Array<number>,
+    edges: number[],
     options?: {
-        seedMembership?: Array<number>,
+        seedMembership?: number[],
         progressHandler?: (percent: number) => void
     }
-) => {|
-    membership: Array<number>,       // membership array for highest modularity partition found
-    modularity: number,              // modularity measure of returned membership
-    modularitiesFound: Array<number> // modularities array for partitions found during the algorithm
-|};
+) => {
+    membership: number[],
+    modularity: number,
+    modularitiesFound: number[]
+};
 ```
 
-```js
-type AlgorithmNameType = 
-      'edgeBetweenness'
+#### Available Algorithms
+
+```ts
+type AlgorithmNameType =
+    | 'edgeBetweenness'
     | 'fastGreedy'
     | 'infomap'
     | 'labelPropagation'
@@ -94,25 +114,27 @@ type AlgorithmNameType =
     | 'optimal'
     | 'spinglass'
     | 'walktrap';
-```
 
-```js
-type SeedsAlgorithmNameType = 
-      'louvainSeed'      
+type SeedsAlgorithmNameType =
+    | 'louvainSeed'
     | 'fastGreedySeed'
     | 'edgeBetweennessSeed';
 ```
 
-Lists of algorithms name is also available in constants: `{ IGRAPH_ALGORITHM_NAMES, SEED_ALGORITHM_NAMES, ALL_ALGORITHM_NAMES } = require('igraph-community')`;
+You can also import the algorithm name constants:
 
-When using algorithms of `SeedsAlgorithmNameType`` for partially known communities you should pass `seedMembership` option.
+```js
+const { IGRAPH_ALGORITHM_NAMES, SEED_ALGORITHM_NAMES, ALL_ALGORITHM_NAMES } = require('igraph-community');
+```
+
+#### Example with Seed Communities
 
 ```js
 const igraphCommunity = require('igraph-community');
 
 const graph = {
     n: 4,
-    edges: [0,  1,  0,  2,  0,  3]
+    edges: [0, 1, 0, 2, 0, 3]
 };
 
 const seedMembership = [-1, 0, 0, -1];
@@ -123,68 +145,75 @@ igraphCommunity.getAPI().then((api) => {
 });
 ```
 
-### compareCommunities
+---
 
-```flow js
+### `compareCommunities`
+
+```ts
 type compareCommunities = (
     method: CompareCommunitiesMethods,
-    membership1: Array<number>,
-    membership2: Array<number>
-) => number
+    membership1: number[],
+    membership2: number[]
+) => number;
+
+type CompareCommunitiesMethods = 'RI' | 'ARI' | 'NMI';
 ```
 
-```js
-type CompareCommunitiesMethods = 
-      'RI'
-    | 'ARI'
-    | 'NMI';
-```
+#### Example
 
 ```js
 const igraphCommunity = require('igraph-community');
 const { COMPARE_COMMUNITIES_METHODS } = igraphCommunity;
 
-const groundTruthMembership = <...>;
+const groundTruthMembership = [...];
 
 igraphCommunity.getAPI().then((api) => {
     const { runCommunityDetection, compareCommunities } = api;
-    
-    const { membership } = runCommunityDetection('louvain', graph.n, graph.edges);
-    
-    compareCommunities(COMPARE_COMMUNITIES_METHODS.NMI, groundTruthMembership, membership)
 
+    const { membership } = runCommunityDetection('louvain', graph.n, graph.edges);
+
+    const score = compareCommunities(COMPARE_COMMUNITIES_METHODS.NMI, groundTruthMembership, membership);
+    console.log('NMI Score:', score);
 });
 ```
 
-# Handling evaluation progress
+---
+
+## Progress Reporting
+
+Some algorithms support progress updates via a `progressHandler` callback:
 
 ```js
 const progressHandler = (percent) => {
-    console.log(percent);
-}
+    console.log(`Progress: ${percent}%`);
+};
 
 runCommunityDetection('fastGreedy', n, edges, { progressHandler });
 ```
 
-Remark: only several algorithms provide progress handling. 
+> **Note:** Not all algorithms emit progress updates.
 
-# Manual build of the project
+---
 
-```
-./buid.sh
-```
+## Manual Build
 
-The command will build Wasm module in development mode providing `-g4` debug information. Other available options are:
+To build the project manually:
 
-```
--p, --production
-    build with -03 optimization, disables debug mode
--a, --asm
-    build ams.js module instead of Wasm
+```bash
+./build.sh
 ```
 
-To enable `emcc` debug information itself try for example:
+This will compile the Wasm module in development mode (`-g4` for debugging symbols).
+
+### Build Options
 
 ```
+-p, --production   Build with -O3 optimizations (no debug symbols)
+-a, --asm          Build an asm.js module instead of WebAssembly
+```
+
+To enable `emcc` debug output, you can run:
+
+```bash
 EMCC_DEBUG=1 ./build.sh --asm
 ```
